@@ -1,0 +1,42 @@
+import '../css/app.css';
+import './bootstrap';
+
+import { InertiaProgress } from '@inertiajs/progress';
+import { createInertiaApp } from '@inertiajs/vue3';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h } from 'vue';
+import VueToastification from 'vue-toastification';
+import 'vue-toastification/dist/index.css';
+import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import Antdv from 'ant-design-vue';
+import VueKonva from 'vue-konva';
+import { createPinia } from 'pinia';
+import {Inertia} from "@inertiajs/inertia";
+const pinia = createPinia();
+
+const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+createInertiaApp({
+    title: (title) => `${title} - ${appName}`,
+    resolve: (name) =>
+        resolvePageComponent(
+            `./Pages/${name}.vue`,
+            import.meta.glob('./Pages/**/*.vue'),
+        ),
+    setup({ el, App, props, plugin }) {
+        return createApp({ render: () => h(App, props) })
+            .use(plugin)
+            .use(ZiggyVue)
+            .use(Antdv)
+            .use(VueToastification)
+            .use(pinia)
+            .use(VueKonva)
+            .mount(el);
+    },
+    progress: {
+        color: '#4B5563',
+    },
+}).then(() => {
+    InertiaProgress.init(); // Tùy chọn để thêm thanh tiến trình
+});
+

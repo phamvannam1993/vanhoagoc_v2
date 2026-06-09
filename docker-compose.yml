@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+    # Web Server Service
+    nginx_learn_en:
+        image: nginx:alpine
+        container_name: nginx_tool
+        ports:
+            - "8084:80"
+        volumes:
+            - ./:/var/www/html
+            - ./docker/nginx/conf.d:/etc/nginx/conf.d/
+        networks:
+            - default
+
+    db-tool:
+        platform: linux/amd64
+        image: mysql:8.0
+        container_name: db-tool
+        environment:
+            MYSQL_DATABASE: dev_db_tool
+            MYSQL_ROOT_PASSWORD: root
+            TZ: 'Asia/Tokyo'
+        command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+        volumes:
+            - dbdata:/var/lib/mysql
+        ports:
+            - 3304:3306
+        networks:
+            - default
+
+    # Application Service
+    app-tool:
+        container_name: app-tool
+        build:
+            context: ./docker/php-fpm
+            dockerfile: Dockerfile
+        volumes:
+            - ./:/var/www/html/
+            - /var/www/html/vendor
+        ports:
+            - "9004:9000"
+        working_dir: /var/www/html/
+        networks:
+            - default
+#Docker Networks
+networks:
+  default:
+    external:
+      name: laravel-network
+
+volumes:
+    dbdata:
+        driver: local
