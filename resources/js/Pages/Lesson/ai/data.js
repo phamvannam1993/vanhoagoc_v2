@@ -4,8 +4,13 @@ export const RTYPES = [
   { id: 'baidoc', name: 'Bài đọc', unit: 'bài đọc', icon: 'reader', color: '#2563eb' },
   { id: 'sachnoi', name: 'Sách nói', unit: 'sách nói', icon: 'headphones', color: '#7c3aed' },
   { id: 'video', name: 'Video', unit: 'video', icon: 'video', color: '#ea580c' },
-  { id: 'baitap', name: 'Bài tập luyện tập', unit: 'bài tập', icon: 'puzzle', color: '#16a34a' },
+  { id: 'baitap', name: 'Bài luyện tập chung', unit: 'bài tập', icon: 'puzzle', color: '#16a34a' },
+  { id: 'baigiao', name: 'Bài tập giao học sinh', unit: 'bài giao', icon: 'send', color: '#0284c7' },
 ];
+
+// bài tập chung cho cả lớp: 10 câu cố định 3 Dễ / 4 TB / 3 Khó
+export const CHUNG_MIX = { Dễ: 3, 'Trung bình': 4, Khó: 3 };
+export const SUG_NHOM = { Dễ: 'Nhóm yếu', 'Trung bình': 'Nhóm khá', Khó: 'Nhóm giỏi' };
 
 // mỗi bài = 10 câu hỏi với tỉ lệ độ khó cố định
 export const BAI_DEFS = [
@@ -22,7 +27,8 @@ export const summaryDesc = {
   baidoc: 'Một bài đọc chung do AI tạo',
   sachnoi: 'Một bản thu âm thanh chung',
   video: 'Một video bài giảng chung',
-  baitap: 'Mỗi bài tập 10 câu hỏi luyện tập',
+  baitap: '10 câu hỏi dùng chung cho cả lớp',
+  baigiao: 'Bài theo mức độ, giao cho từng nhóm học sinh',
 };
 
 // ===== Nội dung mẫu cho 1 bài học =====
@@ -112,6 +118,23 @@ export const LEVEL_STYLE = {
   Dễ: { bg: '#e8f7ee', color: '#15803d' },
   'Trung bình': { bg: '#fdf3e0', color: '#b45309' },
   Khó: { bg: '#fde8e6', color: '#c2410c' },
+};
+
+// ngân hàng biến thể để "Tạo lại bằng AI" cho từng câu hỏi
+export const REGEN_BANK = {
+  chon: [
+    { text: 'Khi đến trường trong ngày tựu trường, bạn nhỏ có cảm xúc gì?', options: [{ t: 'Lo lắng, sợ sệt' }, { t: 'Tự hào vì mình đã lớn', correct: true }, { t: 'Chán nản, mệt mỏi' }, { t: 'Buồn ngủ' }] },
+    { text: 'Câu nào nói đúng nhất về tâm trạng của bạn nhỏ?', options: [{ t: 'Bạn thấy mình nhỏ bé' }, { t: 'Bạn thấy mình đã lớn hơn', correct: true }, { t: 'Bạn thấy lạ lẫm' }, { t: 'Bạn thấy chán' }] },
+    { text: 'Vì sao bạn nhỏ muốn đến trường thật sớm?', options: [{ t: 'Vì háo hức, mong được đi học', correct: true }, { t: 'Vì sợ đi muộn bị phạt' }, { t: 'Vì mẹ bắt buộc' }, { t: 'Vì trời nắng đẹp' }] },
+  ],
+  sapxep: [
+    { seq: ['Mẹ gọi, bạn nhỏ vùng dậy và chuẩn bị thật nhanh.', 'Bạn nhỏ chào mẹ rồi chạy vào sân trường.', 'Bạn nhỏ gặp các bạn đang ríu rít trò chuyện.'] },
+    { seq: ['Buổi sáng tựu trường bắt đầu.', 'Bạn nhỏ đến trường thật sớm.', 'Bạn nhỏ thấy mình đã lớn hơn các em lớp 1.'] },
+  ],
+  noi: [
+    { pairs: [['tựu trường', 'ngày đầu đến lớp'], ['ríu rít', 'nói chuyện vui vẻ, liền nhau'], ['tự hào', 'hãnh diện về bản thân']] },
+    { pairs: [['rụt rè', 'e dè, chưa mạnh dạn'], ['vùng dậy', 'bật dậy thật nhanh'], ['ào vào', 'chạy vào thật nhanh']] },
+  ],
 };
 
 // 10 câu cho 1 bài theo mix

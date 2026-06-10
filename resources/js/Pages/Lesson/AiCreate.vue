@@ -10,9 +10,10 @@ import ReadingBody from './ai/ReadingBody.vue';
 import AudioBody from './ai/AudioBody.vue';
 import VideoBody from './ai/VideoBody.vue';
 import ExerciseSection from './ai/ExerciseSection.vue';
+import ExerciseBaiBody from './ai/ExerciseBaiBody.vue';
 import AssignModal from './ai/AssignModal.vue';
 import HistoryModal from './ai/HistoryModal.vue';
-import { RTYPES, BAI_DEFS, mixStr, summaryDesc } from './ai/data.js';
+import { RTYPES, BAI_DEFS, mixStr, summaryDesc, CHUNG_MIX } from './ai/data.js';
 
 const props = defineProps({
   app_id: [String, Number],
@@ -39,7 +40,7 @@ const backUrl = computed(() => route('lessons.index', { app_id: props.app_id, bo
 const lessonName = computed(() => props.practice?.name || 'Tôi là học sinh lớp 2');
 
 /* ---------- state (port flow2-v3 App) ---------- */
-const selected = reactive({ baidoc: true, sachnoi: true, video: true, baitap: true });
+const selected = reactive({ baidoc: true, sachnoi: true, video: true, baitap: true, baigiao: true });
 const content = ref('Bài đọc "Tôi là học sinh lớp 2" — kể về cảm xúc của bạn nhỏ trong ngày tựu trường đầu tiên của lớp 2.');
 const cfg = reactive({ grade: 'Lớp 2', subject: 'Tiếng Việt', voice: 'Nova (Nữ trẻ)', vstyle: 'Hoạt hình minh hoạ' });
 const counts = reactive({ Dễ: 2, 'Trung bình': 1, Khó: 1 });
@@ -103,7 +104,8 @@ const resSummary = (id) => {
     if (id === 'baidoc') return '1 bài đọc chung';
     if (id === 'sachnoi') return `1 sách nói · giọng ${cfg.voice.split(' (')[0]}`;
     if (id === 'video') return `1 video · ${cfg.vstyle}`;
-    if (id === 'baitap') return `${totalBai.value} bài tập · ${totalCau.value} câu hỏi`;
+    if (id === 'baitap') return '10 câu chung cho cả lớp · 3 Dễ · 4 TB · 3 Khó';
+    if (id === 'baigiao') return `${totalBai.value} bài giao theo 3 nhóm học sinh`;
   }
   if (st === 'cancelled') return 'Đã huỷ — chưa tạo';
   const pct = id === 'sachnoi' ? audioPct.value : id === 'video' ? videoPct.value : null;
@@ -133,6 +135,7 @@ const generate = () => {
   open.value = orderedResults.value[0]?.id || 'setup';
   if (sel('baidoc')) setTimeout(() => (status.baidoc = 'done'), 1500);
   if (sel('baitap')) setTimeout(() => (status.baitap = 'done'), 2300);
+  if (sel('baigiao')) setTimeout(() => (status.baigiao = 'done'), 2600);
   if (sel('sachnoi')) runAudio();
   if (sel('video')) runVideo();
 };
@@ -328,12 +331,16 @@ onUnmounted(() => {
                   <ReadingBody v-if="t.id === 'baidoc'" @toast="showToast" />
                   <AudioBody v-else-if="t.id === 'sachnoi'" @toast="showToast" />
                   <VideoBody v-else-if="t.id === 'video'" :vstyle="cfg.vstyle" @toast="showToast" />
+                  <div v-else-if="t.id === 'baitap'">
+                    <p class="sec-sub">Một bộ <b>10 câu hỏi</b> (3 Dễ · 4 TB · 3 Khó) dùng chung cho <b>cả lớp</b>. Bạn có thể sửa hoặc tạo lại từng câu / cả bài bằng AI.</p>
+                    <ExerciseBaiBody :mix="CHUNG_MIX" />
+                  </div>
                   <ExerciseSection
-                    v-else-if="t.id === 'baitap'"
+                    v-else-if="t.id === 'baigiao'"
                     :bais="bais"
                     :color="t.color"
+                    :counts="counts"
                     :total-bai="totalBai"
-                    :total-cau="totalCau"
                     @assign="showAssign = true"
                   />
                 </template>
