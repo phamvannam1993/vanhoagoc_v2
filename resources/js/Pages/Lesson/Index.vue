@@ -691,6 +691,24 @@ const copyLesson = async (to_week_id) => {
                 </Link>
               </template>
               <template v-else-if="column.key === 'action'">
+                  <Link
+                    :href="
+                      route('lessons.aiCreate', {
+                        practice_id: record.id,
+                        app_id: app_id,
+                        book_id: book_id,
+                        week_id: weekId,
+                      })
+                    "
+                  >
+                    <a-button
+                      type="primary"
+                      size="large"
+                      :class="`btn-ai-create mr-2 whitespace-nowrap ${record.status === 'off' ? 'hide-class' : ''}`"
+                    >
+                      ✨ Tạo bài học bằng AI
+                    </a-button>
+                  </Link>
                   <img
                     v-if="record.status === 'off'"
                     @click="showApp(record.id)"
@@ -784,6 +802,17 @@ const copyLesson = async (to_week_id) => {
 }
 .grey-row {
   background-color: darkgray;
+}
+
+.btn-ai-create.ant-btn-primary {
+  background: linear-gradient(120deg, #3b82f6, #6d5cf6);
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(76, 84, 246, 0.3);
+}
+.btn-ai-create.ant-btn-primary:hover {
+  filter: brightness(1.05);
+  background: linear-gradient(120deg, #3b82f6, #6d5cf6);
 }
 
 .jump-box {

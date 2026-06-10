@@ -127,6 +127,7 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
         Route::prefix('lessons')->name('lessons.')->group(function () {
             Route::get('/', [LessonController::class, 'index'])->name('index');
             Route::get('/create', [LessonController::class, 'create'])->name('create');
+            Route::get('/ai-create', [LessonController::class, 'aiCreate'])->name('aiCreate');
             Route::get('/edit', [LessonController::class, 'edit'])->name('edit');
             Route::get('/detail/{id}', [LessonController::class, 'detail'])->name('detail');
 
