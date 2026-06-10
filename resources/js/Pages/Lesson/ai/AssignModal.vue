@@ -1,27 +1,56 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Icon from '@/Components/AiLessonIcon.vue';
 import CheckBox from './CheckBox.vue';
 import { CLASSES, ROSTER, GROUP_BY_ID, GRP_ORDER } from './data.js';
 
 const props = defineProps({
   groupBai: { type: Object, default: () => ({}) },
+  exerciseItems: { type: Array, default: () => [] },
   totalAssigned: { type: Number, default: 0 },
   title: { type: String, default: '' },
 });
-const emit = defineEmits(['close', 'done']);
+const emit = defineEmits(['close', 'done', 'assign']);
 
-const totalBai = computed(() => GRP_ORDER.reduce((a, g) => a + (props.groupBai[g] || 0), 0));
+const levelToGrp = { 'Dễ': 'yeu', 'Trung bình': 'kha', 'Khó': 'gioi' };
+const itemsByGrp = computed(() => {
+  const map = { yeu: [], kha: [], gioi: [] };
+  props.exerciseItems.forEach(item => {
+    const grp = levelToGrp[item.level] || 'kha';
+    map[grp].push(item);
+  });
+  return map;
+});
+const totalBai = computed(() => props.exerciseItems.length || GRP_ORDER.reduce((a, g) => a + (props.groupBai[g] || 0), 0));
 
 const cls = ref('2a');
-const picked = ref(new Set(ROSTER['2a'].map((s) => s.id)));
+const roster = ref([]);
+const picked = ref(new Set());
 const date = ref('2026-06-16');
 const time = ref('17:00');
 const note = ref('');
 const done = ref(false);
+const loading = ref(false);
 
-const roster = computed(() => ROSTER[cls.value] || []);
-const changeClass = (id) => { cls.value = id; picked.value = new Set(ROSTER[id].map((s) => s.id)); };
+const changeClass = async (id) => {
+  cls.value = id;
+  loading.value = true;
+  try {
+    const response = await axios.get(route('lessons.json.studentsByClass'), {
+      params: { class_code: id }
+    });
+    if (response.data.success) {
+      roster.value = response.data.students || ROSTER[id] || [];
+    } else {
+      roster.value = ROSTER[id] || [];
+    }
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    roster.value = ROSTER[id] || [];
+  }
+  picked.value = new Set(roster.value.map((s) => s.id));
+  loading.value = false;
+};
 const toggleStu = (id) => {
   const n = new Set(picked.value);
   n.has(id) ? n.delete(id) : n.add(id);
@@ -40,6 +69,22 @@ const clsName = computed(() => CLASSES.find((c) => c.id === cls.value)?.name);
 const dateDisp = computed(() => date.value.split('-').reverse().join('/'));
 
 const onOverlay = (e) => { if (e.target === e.currentTarget) emit('close'); };
+
+onMounted(() => {
+  changeClass(cls.value);
+});
+
+const handleAssign = () => {
+  emit('assign', {
+    studentIds: Array.from(picked.value),
+    className: cls.value,
+    dueDate: date.value,
+    dueTime: time.value,
+    note: note.value,
+    exerciseItems: props.exerciseItems,
+  });
+  done.value = true;
+};
 </script>
 
 <template>
@@ -78,7 +123,10 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) emit('close'); };
         <div class="as-field">
           <div class="as-row-label">
             <label class="lbl-sm" style="margin: 0">Chọn học sinh nhận bài</label>
-            <span class="muted" style="font-size: 13px">Đã chọn <b style="color: var(--ink)">{{ pickedCount }}</b>/{{ roster.length }} HS</span>
+            <span v-if="loading" class="muted" style="font-size: 13px">
+              <span class="spin"></span>Đang tải…
+            </span>
+            <span v-else class="muted" style="font-size: 13px">Đã chọn <b style="color: var(--ink)">{{ pickedCount }}</b>/{{ roster.length }} HS</span>
           </div>
           <div class="grp-cards">
             <template v-for="g in GRP_ORDER" :key="g">
@@ -90,7 +138,15 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) emit('close'); };
                   />
                   <span class="ac-dot" :style="{ background: GROUP_BY_ID[g].color }"></span>
                   <span class="gc-name">{{ GROUP_BY_ID[g].name }}</span>
-                  <span class="gc-q" :style="{ color: GROUP_BY_ID[g].color, background: GROUP_BY_ID[g].bg }">nhận {{ groupBai[g] || 0 }} bài</span>
+                  <span v-if="exerciseItems.length" class="gc-q" :style="{ color: GROUP_BY_ID[g].color, background: GROUP_BY_ID[g].bg }">nhận {{ itemsByGrp[g].length }} bài</span>
+                  <span v-else class="gc-q" :style="{ color: GROUP_BY_ID[g].color, background: GROUP_BY_ID[g].bg }">nhận {{ groupBai[g] || 0 }} bài</span>
+                </div>
+                <!-- Show exercise items for this group -->
+                <div v-if="exerciseItems.length && itemsByGrp[g].length" class="gc-items">
+                  <div v-for="item in itemsByGrp[g]" :key="item.id" class="gc-item">
+                    <span class="item-name">{{ item.name }}</span>
+                    <span class="item-level">{{ item.total_questions }} câu</span>
+                  </div>
                 </div>
                 <div class="gc-students">
                   <label v-for="s in grpStudents(g)" :key="s.id" class="stu" :class="{ on: picked.has(s.id) }" @click="toggleStu(s.id)">
@@ -122,7 +178,7 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) emit('close'); };
         <button class="btn" @click="emit('close')">Huỷ</button>
         <div style="display: flex; align-items: center; gap: 14px">
           <span class="foot-info">Giao <b>{{ totalBai }}</b> bài cho <b>{{ pickedCount }}</b> HS {{ clsName }}</span>
-          <button class="btn btn-primary btn-lg" :disabled="pickedCount === 0" @click="done = true">
+          <button class="btn btn-primary btn-lg" :disabled="pickedCount === 0" @click="handleAssign">
             <Icon name="send" :size="16" />Giao bài
           </button>
         </div>
@@ -130,3 +186,29 @@ const onOverlay = (e) => { if (e.target === e.currentTarget) emit('close'); };
     </div>
   </div>
 </template>
+
+<style scoped lang="scss">
+.gc-items {
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.gc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+
+  .item-name {
+    color: #374151;
+    font-weight: 500;
+  }
+
+  .item-level {
+    color: #9ca3af;
+    font-size: 12px;
+  }
+}
+</style>

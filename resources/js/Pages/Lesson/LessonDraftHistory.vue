@@ -20,6 +20,9 @@ const previewMode = ref(false);
 const confirmModal = ref(false);
 const confirmAction = ref(null);
 const confirmMessage = ref('');
+const editingText = ref(false);
+const editingItem = ref(null);
+const editingValue = ref('');
 const toast = useToast();
 const apiKey = import.meta.env.VITE_TINY_MCE_API_KEY;
 
@@ -29,7 +32,6 @@ const editorConfig = {
     menubar: 'file edit view format tools table',
     statusbar: true,
     language: 'vi',
-    readonly: true,
     toolbar: 'undo redo | formatselect fontselect fontsizeselect | bold italic | alignleft aligncenter alignright | bullist numlist | link image',
     font_family_formats:
         'Arial=arial,helvetica,sans-serif;' +
@@ -180,6 +182,65 @@ const onVideoError = (error) => {
     toast.error('Lỗi tải tệp video');
 };
 
+const startEditItem = (type, index) => {
+    const item = selectedDraft.value[`lesson_${type === 'audio' ? 'noi' : type === 'video' ? 'video' : 'doc'}`];
+    editingItem.value = { type, index };
+    editingValue.value = item || '';
+};
+
+const cancelEditItem = () => {
+    editingItem.value = null;
+    editingValue.value = '';
+};
+
+const saveEditItem = (item, newValue) => {
+    if (typeof item === 'string') {
+        // If it's a string, we can't modify it directly
+        // Need to update parent array
+        toast.info('Cập nhật trong array');
+    } else if (typeof item === 'object') {
+        // Update object properties
+        item.noi_dung = newValue || item.noi_dung;
+        item.value = newValue || item.value;
+        item.text = newValue || item.text;
+    }
+    editingItem.value = null;
+    editingValue.value = '';
+    toast.success('✓ Đã cập nhật');
+};
+
+const getItemText = (item) => {
+    if (typeof item === 'string') return item;
+    if (typeof item === 'object') {
+        return item.noi_dung || item.value || item.text || '';
+    }
+    return '';
+};
+
+const saveTextContent = async () => {
+    if (!selectedDraft.value || !selectedDraft.value.lesson_doc) {
+        toast.error('Không có nội dung để lưu');
+        return;
+    }
+
+    try {
+        const response = await axios.post(route('lessons.json.saveTextContent'), {
+            draft_id: selectedDraft.value.id,
+            lesson_doc: selectedDraft.value.lesson_doc,
+        });
+
+        if (response.data.success) {
+            toast.success('✓ Nội dung văn bản đã cập nhật');
+            editingText.value = false;
+        } else {
+            toast.error(response.data.message || 'Lỗi lưu nội dung');
+        }
+    } catch (error) {
+        console.error('Error saving text:', error);
+        toast.error('Lỗi lưu nội dung');
+    }
+};
+
 // Expose methods for parent components
 defineExpose({
     openModal
@@ -235,11 +296,34 @@ defineExpose({
 
                     <!-- Text Content -->
                     <div v-if="selectedDraft.lesson_doc" class="bg-blue-50 p-4 rounded-lg">
-                        <h3 class="font-bold text-blue-900 mb-2">📄 Nội dung văn bản</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-bold text-blue-900">📄 Nội dung văn bản</h3>
+                            <button
+                                v-if="!editingText"
+                                @click="editingText = true"
+                                class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                            >
+                                ✏️ Sửa
+                            </button>
+                            <div v-else class="flex gap-2">
+                                <button
+                                    @click="editingText = false"
+                                    class="px-3 py-1 bg-gray-400 text-white text-sm rounded hover:bg-gray-500"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    @click="saveTextContent"
+                                    class="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+                                >
+                                    💾 Lưu
+                                </button>
+                            </div>
+                        </div>
                         <Editor
                             v-model="selectedDraft.lesson_doc"
                             :api-key="apiKey"
-                            :init="editorConfig"
+                            :init="{ ...editorConfig, readonly: !editingText }"
                         />
                     </div>
 
@@ -378,6 +462,34 @@ defineExpose({
 </template>
 
 <style scoped>
+.editable-item {
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+}
+
+.editable-item:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+}
+
+.item-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #3b82f6;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.item-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 button {
     transition: all 0.2s ease;
 }

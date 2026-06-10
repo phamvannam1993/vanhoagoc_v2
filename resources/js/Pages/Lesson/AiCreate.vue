@@ -13,6 +13,7 @@ import ExerciseSection from './ai/ExerciseSection.vue';
 import AssignModal from './ai/AssignModal.vue';
 import HistoryModal from './ai/HistoryModal.vue';
 import { RTYPES, BAI_DEFS, mixStr, summaryDesc } from './ai/data.js';
+import LessonDraftHistory from '@/Pages/Lesson/LessonDraftHistory.vue';
 
 const props = defineProps({
   app_id: [String, Number],
@@ -54,10 +55,37 @@ const toast = ref(null);
 const files = ref([]);
 const audioTimer = ref(null);
 const videoTimer = ref(null);
+const bundleIdRef = ref(null);
+const pollingIntervals = ref(new Map());
+const quizResult = ref(null);
+const historyModal = ref(null);
 
 const GRADES = ['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5'];
 const SUBJECTS = ['Tiếng Việt', 'Toán', 'Tự nhiên & Xã hội'];
 const VOICES = ['Nova (Nữ trẻ)', 'Mai (Nữ miền Bắc)', 'Minh (Nam miền Bắc)'];
+
+const getQueryParam = (param) => {
+  const searchParams = new URLSearchParams(window.location.search);
+  return searchParams.get(param);
+};
+
+const uploadFiles = async () => {
+  const urls = [];
+  for (const file of files.value) {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await axios.post(route('lessons.json.uploadMultiFile'), formData);
+      if (response.data.success && response.data.url) {
+        urls.push(response.data.url);
+      }
+    } catch (error) {
+      showToast('❌ Lỗi upload file');
+      throw error;
+    }
+  }
+  return urls;
+};
 
 const sel = (id) => selected[id];
 const orderedResults = computed(() => RTYPES.filter((t) => sel(t.id)));
@@ -110,42 +138,295 @@ const resSummary = (id) => {
   return pct != null ? `Đang tạo · ${pct}%` : 'Đang tạo…';
 };
 
-/* mô phỏng tiến trình (không backend) */
-const runProgress = (key, pctRef, timerRef, doneMsg, speed) => {
-  status[key] = 'generating';
-  pctRef.value = 0;
-  clearInterval(timerRef.value);
-  timerRef.value = setInterval(() => {
-    pctRef.value = Math.min(100, pctRef.value + Math.round(3 + Math.random() * 7));
-    if (pctRef.value >= 100) {
-      clearInterval(timerRef.value);
-      status[key] = 'done';
-      showToast(doneMsg);
-    }
-  }, speed);
-};
-const runAudio = () => runProgress('sachnoi', audioPct, audioTimer, '🔊 Đã tạo xong sách nói', 520);
-const runVideo = () => runProgress('video', videoPct, videoTimer, '🎬 Đã tạo xong video', 560);
+const pollTaskStatus = (bundleId) => {
+  if (!bundleId) return;
 
-const generate = () => {
+  const checkAndSave = async () => {
+    try {
+      const response = await axios.get(route('lessons.json.getBundleStatus'), {
+        params: { bundle_id: bundleId }
+      });
+
+      const bundle = response.data;
+
+      if (bundle.children) {
+        // Parse baidoc (text)
+        if (bundle.children.baidoc) {
+          const baidoc = bundle.children.baidoc;
+          if (baidoc.status === 'done' && status.baidoc !== 'done') {
+            status.baidoc = 'done';
+            showToast('✓ Bài đọc tạo xong');
+          } else if (baidoc.status === 'failed') {
+            status.baidoc = 'cancelled';
+            showToast('❌ Lỗi tạo bài đọc');
+          }
+        }
+
+        // Parse sachnoi (audio)
+        if (bundle.children.sachnoi) {
+          const sachnoi = bundle.children.sachnoi;
+          if (sachnoi.status === 'done' && status.sachnoi !== 'done') {
+            status.sachnoi = 'done';
+            audioPct.value = 100;
+            showToast('🔊 Sách nói tạo xong');
+          } else if (sachnoi.status === 'processing') {
+            audioPct.value = sachnoi.progress || 50;
+          } else if (sachnoi.status === 'failed') {
+            status.sachnoi = 'cancelled';
+            showToast('❌ Lỗi tạo sách nói');
+          }
+        }
+
+        // Parse video
+        if (bundle.children.video) {
+          const video = bundle.children.video;
+          if (video.status === 'done' && status.video !== 'done') {
+            status.video = 'done';
+            videoPct.value = 100;
+            showToast('🎬 Video tạo xong');
+          } else if (video.status === 'processing') {
+            videoPct.value = video.progress || 50;
+          } else if (video.status === 'failed') {
+            status.video = 'cancelled';
+            showToast('❌ Lỗi tạo video');
+          }
+        }
+
+        // Parse baitap (exercises)
+        if (bundle.children.baitap_giao) {
+          const baitap = bundle.children.baitap_giao;
+          if (baitap.status === 'done' && status.baitap !== 'done') {
+            status.baitap = 'done';
+            showToast('✓ Bài tập tạo xong');
+            // Parse exercises from API - transform to bais format with real questions
+            if (baitap.result_json && baitap.result_json.giao && !quizResult.value) {
+              quizResult.value = [];
+              baitap.result_json.giao.forEach(baiGroup => {
+                const baiData = {
+                  level: baiGroup.level,
+                  mix: {
+                    'Dễ': 0,
+                    'Trung bình': 0,
+                    'Khó': 0,
+                  },
+                  realQuestions: baiGroup.questions || [],
+                };
+                // Count questions by level for mix display
+                baiGroup.questions?.forEach(q => {
+                  if (q.muc_do === 'Dễ') baiData.mix['Dễ']++;
+                  else if (q.muc_do === 'Trung bình') baiData.mix['Trung bình']++;
+                  else if (q.muc_do === 'Khó') baiData.mix['Khó']++;
+                });
+                quizResult.value.push(baiData);
+              });
+            }
+          } else if (baitap.status === 'failed') {
+            status.baitap = 'cancelled';
+            showToast('❌ Lỗi tạo bài tập');
+          }
+        }
+
+        // Check if all are done
+        const allDone = [
+          !sel('baidoc') || status.baidoc === 'done',
+          !sel('sachnoi') || status.sachnoi === 'done',
+          !sel('video') || status.video === 'done',
+          !sel('baitap') || status.baitap === 'done',
+        ].every(v => v);
+
+        if (allDone) {
+          clearInterval(interval);
+          pollingIntervals.value.delete('bundle');
+          showToast('✓ Tất cả nội dung đã tạo xong!');
+          // Auto-save
+          await saveAll();
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Bundle poll error:', error);
+      return false;
+    }
+  };
+
+  const interval = setInterval(() => {
+    checkAndSave();
+  }, 3000);
+
+  pollingIntervals.value.set('bundle', interval);
+};
+
+const generate = async () => {
+  if (orderedResults.value.length === 0) {
+    showToast('❌ Vui lòng chọn ít nhất một loại nội dung');
+    return;
+  }
+
+  if (!content.value.trim() && files.value.length === 0) {
+    showToast('❌ Vui lòng nhập nội dung hoặc tải file');
+    return;
+  }
+
   orderedResults.value.forEach((t) => (status[t.id] = 'generating'));
   phase.value = 'ready';
   open.value = orderedResults.value[0]?.id || 'setup';
-  if (sel('baidoc')) setTimeout(() => (status.baidoc = 'done'), 1500);
-  if (sel('baitap')) setTimeout(() => (status.baitap = 'done'), 2300);
-  if (sel('sachnoi')) runAudio();
-  if (sel('video')) runVideo();
+
+  try {
+    // Upload files if any
+    let contentUrls = [];
+    if (files.value.length > 0) {
+      contentUrls = await uploadFiles();
+    }
+
+    // Map voice name to API code
+    const voiceMap = {
+      'nova (nữ trẻ)': 'hn_female_ngochuyen_full_48k-fhg',
+      'mai (nữ miền bắc)': 'hn_female_mai',
+      'minh (nam miền bắc)': 'hn_male_minh',
+    };
+    const voiceKey = cfg.voice.toLowerCase();
+    const voiceCode = voiceMap[voiceKey] || 'hn_female_ngochuyen_full_48k-fhg';
+
+    // Build types array
+    const types = [];
+    if (sel('baidoc')) types.push('baidoc');
+    if (sel('sachnoi')) types.push('sachnoi');
+    if (sel('video')) types.push('video');
+    if (sel('baitap')) {
+      types.push('baitap_giao');
+      types.push('baitap_chung');
+    }
+
+    // Build level mix for exercises
+    const levelMix = {};
+    BAI_DEFS.forEach((d) => {
+      if (counts[d.level]) levelMix[d.level] = counts[d.level];
+    });
+
+    const bundlePayload = {
+      content_text: content.value,
+      content_urls: contentUrls,
+      lop: cfg.grade,
+      mon: cfg.subject,
+      voice: voiceCode,
+      types: types,
+      level_mix: levelMix,
+    };
+
+    const bundleResponse = await axios.post(route('lessons.json.generateBundle'), bundlePayload);
+
+    if (bundleResponse.data.bundle_id) {
+      bundleIdRef.value = bundleResponse.data.bundle_id;
+      showToast(`⏳ Đang tạo ${types.length} loại nội dung...`);
+      pollTaskStatus(bundleResponse.data.bundle_id);
+    } else {
+      throw new Error('Không nhận được bundle_id');
+    }
+  } catch (error) {
+    console.error('Generate error:', error);
+    showToast('❌ Lỗi tạo bài giảng');
+    orderedResults.value.forEach((t) => (status[t.id] = 'cancelled'));
+  }
 };
-const cancel = (key, timerRef) => {
-  clearInterval(timerRef.value);
+
+const cancel = (key) => {
   status[key] = 'cancelled';
+  showToast(`Đã hủy tạo ${key}`);
 };
+
 const retry = (id) => {
-  if (id === 'sachnoi') runAudio();
-  else if (id === 'video') runVideo();
-  else status[id] = 'done';
+  status[id] = 'generating';
+  if (bundleIdRef.value) {
+    pollTaskStatus(bundleIdRef.value);
+  } else {
+    status[id] = 'cancelled';
+  }
 };
-const saveAll = () => showToast('Đã lưu tất cả bài giảng');
+
+
+const onQuestionUpdate = ({ baiIdx, qIdx, data }) => {
+  if (quizResult.value && quizResult.value[baiIdx]?.realQuestions) {
+    quizResult.value[baiIdx].realQuestions[qIdx] = data;
+    // Recalculate mix
+    const mix = { 'Dễ': 0, 'Trung bình': 0, 'Khó': 0 };
+    quizResult.value[baiIdx].realQuestions.forEach(q => {
+      if (q.muc_do === 'Dễ') mix['Dễ']++;
+      else if (q.muc_do === 'Trung bình') mix['Trung bình']++;
+      else if (q.muc_do === 'Khó') mix['Khó']++;
+    });
+    quizResult.value[baiIdx].mix = mix;
+  }
+  showToast('✓ Câu hỏi đã cập nhật');
+};
+
+const onQuestionDelete = ({ baiIdx, qIdx }) => {
+  if (quizResult.value && quizResult.value[baiIdx]?.realQuestions) {
+    quizResult.value[baiIdx].realQuestions.splice(qIdx, 1);
+    // Recalculate mix
+    const mix = { 'Dễ': 0, 'Trung bình': 0, 'Khó': 0 };
+    quizResult.value[baiIdx].realQuestions.forEach(q => {
+      if (q.muc_do === 'Dễ') mix['Dễ']++;
+      else if (q.muc_do === 'Trung bình') mix['Trung bình']++;
+      else if (q.muc_do === 'Khó') mix['Khó']++;
+    });
+    quizResult.value[baiIdx].mix = mix;
+  }
+  showToast('✓ Câu hỏi đã xóa');
+};
+
+const onAssignExercises = async (data) => {
+  try {
+    const response = await axios.post(route('lessons.json.assignExercises'), {
+      student_ids: data.studentIds,
+      class_code: data.className,
+      due_date: data.dueDate,
+      due_time: data.dueTime,
+      note: data.note,
+      exercise_items: data.exerciseItems,
+    });
+
+    if (response.data.success) {
+      showToast('✓ Giao bài thành công!');
+    } else {
+      showToast('❌ ' + response.data.message);
+    }
+  } catch (error) {
+    showToast('❌ Lỗi giao bài');
+    console.error('Assign error:', error);
+  }
+};
+
+const saveAll = async () => {
+  const practice_id = props.practice_id || getQueryParam('practice_id');
+  if (!practice_id || !bundleIdRef.value) {
+    showToast('❌ Không thể lưu - thiếu thông tin');
+    return;
+  }
+
+  try {
+    const response = await axios.post(route('lessons.json.saveBundleResult'), {
+      practice_id: practice_id,
+      bundle_id: bundleIdRef.value,
+      app_id: props.app_id || getQueryParam('app_id'),
+      book_id: props.book_id || getQueryParam('book_id'),
+      week_id: props.week_id || getQueryParam('week_id'),
+    });
+
+    if (response.data.success) {
+      showToast('✓ Bài giảng đã lưu vào nháp');
+      // Open history modal to show draft
+      setTimeout(() => {
+        if (historyModal.value) {
+          historyModal.value.openModal();
+        }
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Save error:', error);
+    showToast('❌ Lỗi khi lưu');
+  }
+};
 
 /* accent cho khối đang tạo */
 const sachnoiAccent = { c: '#7c3aed', bd: '#e2d5f5', bg: 'linear-gradient(180deg,#fcfaff,#f6f0fe)', ring: '#e9ddf8' };
@@ -153,8 +434,8 @@ const videoAccent = { c: '#ea580c', bd: '#fad9bf', bg: 'linear-gradient(180deg,#
 const eta = (pct) => Math.max(1, Math.ceil(((100 - pct) / 100) * 16));
 
 onUnmounted(() => {
-  clearInterval(audioTimer.value);
-  clearInterval(videoTimer.value);
+  pollingIntervals.value.forEach(interval => clearInterval(interval));
+  pollingIntervals.value.clear();
 });
 </script>
 
@@ -166,7 +447,7 @@ onUnmounted(() => {
         <div class="flow-head">
           <Link :href="backUrl" class="flow-back"><Icon name="back" :size="16" />Quay lại</Link>
           <div class="flow-spacer"></div>
-          <button class="btn" @click="showHist = true"><Icon name="history" :size="16" />Lịch sử</button>
+          <button class="btn" @click="historyModal && historyModal.openModal()"><Icon name="history" :size="16" />Lịch sử</button>
         </div>
         <h1 class="page-title" style="margin-bottom: 18px">Tạo nội dung bằng AI <span class="v2-tag">V3</span></h1>
 
@@ -328,14 +609,18 @@ onUnmounted(() => {
                   <ReadingBody v-if="t.id === 'baidoc'" @toast="showToast" />
                   <AudioBody v-else-if="t.id === 'sachnoi'" @toast="showToast" />
                   <VideoBody v-else-if="t.id === 'video'" :vstyle="cfg.vstyle" @toast="showToast" />
-                  <ExerciseSection
-                    v-else-if="t.id === 'baitap'"
-                    :bais="bais"
-                    :color="t.color"
-                    :total-bai="totalBai"
-                    :total-cau="totalCau"
-                    @assign="showAssign = true"
-                  />
+                  <template v-else-if="t.id === 'baitap'">
+                    <!-- Real API data or mock fallback -->
+                    <ExerciseSection
+                      :bais="quizResult && quizResult.length > 0 ? quizResult : bais"
+                      :color="t.color"
+                      :total-bai="totalBai"
+                      :total-cau="totalCau"
+                      @assign="showAssign = true"
+                      @question-update="onQuestionUpdate"
+                      @question-delete="onQuestionDelete"
+                    />
+                  </template>
                 </template>
               </div>
             </div>
@@ -349,7 +634,7 @@ onUnmounted(() => {
             <template v-else>Đã tạo nội dung cho <b>“{{ lessonName }}”</b> · <b>{{ totalBai }}</b> bài tập</template>
           </span>
           <div style="display: flex; gap: 10px">
-            <button class="btn" @click="showHist = true"><Icon name="history" :size="15" />Lịch sử</button>
+            <button class="btn" @click="historyModal && historyModal.openModal()"><Icon name="history" :size="15" />Lịch sử</button>
             <button class="btn btn-primary btn-lg" @click="saveAll">
               <Icon name="save" :size="16" />{{ audioBusy || videoBusy ? 'Lưu phần đã xong' : 'Lưu tất cả' }}
             </button>
@@ -357,13 +642,21 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <AssignModal v-if="showAssign" :group-bai="assignGroupBai" :total-assigned="totalCau" @close="showAssign = false" @done="showAssign = false" />
-      <HistoryModal v-if="showHist" @close="showHist = false" />
+      <AssignModal
+        v-if="showAssign"
+        :group-bai="assignGroupBai"
+        :exercise-items="quizResult || []"
+        :total-assigned="totalCau"
+        @close="showAssign = false"
+        @done="showAssign = false"
+        @assign="onAssignExercises"
+      />
+      <LessonDraftHistory ref="historyModal" :practice-id="parseInt(props.practice_id) || parseInt(getQueryParam('practice_id'))" />
       <div v-if="toast" class="toast"><Icon name="check" :size="16" :stroke="3" />{{ toast }}</div>
     </div>
   </MasterLayout>
 </template>
 
 <style lang="scss">
-@import '../../../css/ai-lesson.scss';
+@use '../../../css/ai-lesson' as *;
 </style>

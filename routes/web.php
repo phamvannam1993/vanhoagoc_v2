@@ -145,14 +145,20 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
                 // Lesson generation API
                 Route::post('/generate-text', [LessonGeneratorController::class, 'generateText'])->name('generateText');
                 Route::post('/generate-audio', [LessonGeneratorController::class, 'generateAudio'])->name('generateAudio');
+                Route::post('/generate-bundle', [LessonGeneratorController::class, 'generateBundle'])->name('generateBundle');
                 Route::get('/task-status', [LessonGeneratorController::class, 'taskStatus'])->name('taskStatus');
+                Route::get('/bundle-status', [LessonGeneratorController::class, 'getBundleStatus'])->name('getBundleStatus');
                 Route::post('/save-audio-result', [LessonGeneratorController::class, 'saveAudioResult'])->name('saveAudioResult');
+                Route::post('/save-bundle-result', [LessonGeneratorController::class, 'saveBundleResult'])->name('saveBundleResult');
+                Route::get('/students-by-class', [LessonGeneratorController::class, 'getStudentsByClass'])->name('studentsByClass');
+                Route::post('/assign-exercises', [LessonGeneratorController::class, 'assignExercises'])->name('assignExercises');
                 Route::post('/upload-multi-file', [LessonQuizGeneratorController::class, 'uploadMultiFile'])->name('uploadMultiFile');
 
                 // Lesson draft history
                 Route::get('/draft/history', [LessonDraftController::class, 'history'])->name('draftHistory');
                 Route::get('/draft/preview', [LessonDraftController::class, 'preview'])->name('draftPreview');
                 Route::post('/draft/approve', [LessonDraftController::class, 'approve'])->name('draftApprove');
+                Route::post('/draft/save-text', [LessonDraftController::class, 'saveTextContent'])->name('saveTextContent');
                 Route::delete('/draft/delete', [LessonDraftController::class, 'delete'])->name('draftDelete');
             });
 

@@ -160,6 +160,47 @@ class LessonDraftController extends Controller
         }
     }
 
+    public function saveTextContent(Request $request)
+    {
+        $draftId = $request->get('draft_id');
+        $lessonDoc = $request->get('lesson_doc');
+
+        if (!$draftId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Thiếu draft_id'
+            ], 400);
+        }
+
+        $draft = LessonDraft::find($draftId);
+        if (!$draft) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy draft'
+            ], 404);
+        }
+
+        try {
+            $draft->lesson_doc = $lessonDoc;
+            $draft->save();
+
+            Log::info('Draft text content updated', [
+                'draft_id' => $draftId
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Nội dung văn bản đã cập nhật'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Save text content error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function delete(Request $request)
     {
         $draftId = $request->get('draft_id');
