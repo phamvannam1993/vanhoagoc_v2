@@ -75,6 +75,32 @@ class LessonController extends BaseModuleController
         ]);
     }
 
+    /**
+     * Màn "Tạo bài học bằng AI" (design Tạo bài giảng V3).
+     * Render trang sinh nội dung (Bài đọc / Sách nói / Video / Bài tập) bằng AI cho 1 bài học.
+     */
+    public function aiCreate(Request $request): Response
+    {
+        $appId = $request->query('app_id');
+        $bookId = $request->query('book_id');
+        $weekId = $request->query('week_id');
+        $practiceId = $request->query('practice_id');
+
+        $week = $this->weekRepository->findOrFail($weekId);
+        $week->load('book.app');
+
+        $practice = $practiceId ? Practice::find($practiceId) : null;
+
+        return Inertia::render('Lesson/AiCreate', [
+            'app_id' => $appId,
+            'book_id' => $bookId,
+            'week_id' => $weekId,
+            'practice_id' => $practiceId,
+            'week' => $week,
+            'practice' => $practice,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $params = $request->all([
