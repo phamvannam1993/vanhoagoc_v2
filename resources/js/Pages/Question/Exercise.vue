@@ -20,6 +20,7 @@ const practice_id = query.practice_id;
 const app_id = query.app_id;
 const book_id = query.book_id;
 const week_id = query.week_id;
+const exercise_item_id = query.exercise_item_id;
 const formFilter = ref({
     search: '',
     practice_id: parseInt(practice_id),
@@ -154,6 +155,7 @@ const loadData = async () => {
         app_id: formFilter.value.app_id,
         book_id: formFilter.value.book_id,
         week_id: formFilter.value.week_id,
+        ...(exercise_item_id && { exercise_item_id }),
     };
     const res = await axios.get(route('questionEditors.json.list', params));
 

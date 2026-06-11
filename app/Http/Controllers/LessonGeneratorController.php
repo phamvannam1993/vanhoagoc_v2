@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Practice;
 use App\Models\LessonDraft;
 
@@ -715,6 +716,306 @@ class LessonGeneratorController extends Controller
         }
     }
 
+    public function saveAssignExercises(Request $request) {
+        try {
+            $validated = $request->validate([
+                'practice_id' => 'required|integer',
+                'bundle_id' => 'required',
+                'exercise_items' => 'required|array',
+                'app_id' => 'nullable|integer',
+                'book_id' => 'nullable|integer',
+                'week_id' => 'nullable|integer',
+            ]);
+
+            $practiceId = $validated['practice_id'];
+            $exerciseItems = $validated['exercise_items'];
+            // $isSingleSave = count($exerciseItems) === 1;
+
+            // Get latest LessonDraft for this practice to link exercises
+            // $lessonDraft = \App\Models\LessonDraft::where('practice_id', $practiceId)
+            //     ->latest('id')
+            //     ->first();
+
+
+            // Create ExerciseItems (con) + ExerciseQuestions + save to question/answer tables
+            foreach ($exerciseItems as $idx => $item) {
+                $baiIndex = $item['bai_index'] ?? ($idx + 1);
+                $exerciseItem = \App\Models\ExerciseItem::create([
+                    'name' => $item['name'] ?? "Bài " . $baiIndex,
+                    'order' => $baiIndex,
+                    'app_id' => $validated['app_id'],
+                    'book_id' => $validated['book_id'],
+                    'practice_id' => $validated['practice_id'],
+                    'week_id' => $validated['week_id'],
+                    'level' => $item['level'],
+                    'question_mix' => $item['mix'] ?? [],
+                    'total_questions' => count($item['realQuestions'] ?? []),
+                ]);
+
+                // Create questions for this item
+                foreach ($item['realQuestions'] ?? [] as $idx => $q) {
+                    $this->saveQuestionToEditor($q, $exerciseItem->id, $practiceId, $validated);
+                }
+            }
+
+            Log::info('Assign exercises saved', [
+                'practice_id' => $practiceId,
+                // 'exercise_id' => $exercise->id,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Bài tập đã lưu',
+                // 'exercise_id' => $exercise->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error saving assign exercises: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi lưu bài tập: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function saveQuestionToEditor(
+        $question,
+        $exerciseItemId,
+        $practiceId,
+        $metadata
+    ) {
+        try {
+            // Build answers array theo chuẩn ExerciseService
+            $answers = [];
+            $answerConnects = [];
+
+            if ($question['kind'] === 'chon' && !empty($question['options'])) {
+                $correctAnswer = $question['dap_an_dung'] ?? null;
+                foreach ($question['options'] as $idx => $opt) {
+                    $optValue = is_array($opt) ? ($opt['noi_dung'] ?? $opt['value'] ?? $opt) : $opt;
+                    $answers[] = [
+                        'type' => 'text',
+                        'value' => $optValue,
+                        'checked' => ($correctAnswer === chr(65 + $idx)) ? true : false,
+                        'inputNumber' => '',
+                        'answer_text' => ''
+                    ];
+                }
+            } elseif ($question['kind'] === 'sx' && !empty($question['options'])) {
+                foreach ($question['options'] as $idx => $opt) {
+                    $optValue = is_array($opt) ? ($opt['noi_dung'] ?? $opt['value'] ?? $opt) : $opt;
+                    $answers[] = [
+                        'type' => 'text',
+                        'value' => $optValue,
+                        'checked' => false,
+                        'inputNumber' => (string)($idx + 1),
+                        'answer_text' => ''
+                    ];
+                }
+            } elseif ($question['kind'] === 'noi' && !empty($question['cot_a']) && !empty($question['cot_b'])) {
+                $cotA = $question['cot_a'] ?? [];
+                $cotB = $question['cot_b'] ?? [];
+                $minLen = min(count($cotA), count($cotB));
+
+                for ($i = 0; $i < $minLen; $i++) {
+                    $aVal = is_array($cotA[$i]) ? ($cotA[$i]['noi_dung'] ?? $cotA[$i]['value'] ?? $cotA[$i]) : $cotA[$i];
+                    $bVal = is_array($cotB[$i]) ? ($cotB[$i]['noi_dung'] ?? $cotB[$i]['value'] ?? $cotB[$i]) : $cotB[$i];
+
+                    $answers[] = [
+                        'type' => 'text',
+                        'value' => $aVal,
+                        'checked' => false,
+                        'inputNumber' => (string)$i,
+                        'answer_text' => $aVal
+                    ];
+
+                    $answerConnects[] = [
+                        'type' => 'text',
+                        'value' => $bVal,
+                        'inputNumber' => (string)$i,
+                        'answer_text' => $bVal
+                    ];
+                }
+            }
+
+            // Get template ID from question_templates table using ma_cau_hoi
+            $templateId = null;
+            $maCauHoi = $question['ma_cau_hoi'] ?? null;
+
+            if ($maCauHoi) {
+                $questionTemplate = \App\Models\QuestionTemplate::where('playable', $maCauHoi)->first();
+                if ($questionTemplate) {
+                    $templateId = $questionTemplate->id;
+                }
+            }
+
+            $isMultiResult = 0;
+            if (!empty($answers)) {
+                $checkedCount = count(array_filter($answers, fn($a) => $a['checked'] ?? false));
+                $isMultiResult = $checkedCount > 1 ? 1 : 0;
+            }
+
+            \App\Models\QuestionEditor::create([
+                'practice_id' => $practiceId,
+                'exercise_item_id' => $exerciseItemId,
+                'user_id' => Auth::id(),
+                'title' => $question['tieu_de'] ?? '',
+                'question_val' => $question['cau_hoi'] ?? $question['tieu_de'] ?? 'Câu hỏi',
+                'question_type' => 'text',
+                'audio_val' => null,
+                'question_video_url' => null,
+                'pcnl' => null,
+                'ndgd' => null,
+                'competency_id' => null,
+                'competency_component_id' => null,
+                'background' => null,
+                'template' => $templateId,
+                'book_id' => $metadata['book_id'] ?? null,
+                'week_id' => $metadata['week_id'] ?? null,
+                'answers' => !empty($answers) ? $answers : [],
+                'answer_connects' => !empty($answerConnects) ? $answerConnects : [],
+                'is_multi_result' => $isMultiResult,
+                'tem_playable_id' => 'cau_hoi_auto',
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to save question to editor: ' . $e->getMessage(), [
+                'question_title' => $question['tieu_de'] ?? 'Unknown',
+                'exercise_item_id' => $exerciseItemId,
+            ]);
+        }
+    }
+
+    public function createStudentExercise(Request $request) {
+        try {
+            $validated = $request->validate([
+                'practice_id' => 'required|integer',
+                'exercise_name' => 'required|string',
+                'exercise_level' => 'required|string|in:Dễ,Trung bình,Khó',
+                'questions' => 'required|array',
+                'app_id' => 'nullable|integer',
+                'book_id' => 'nullable|integer',
+                'week_id' => 'nullable|integer',
+            ]);
+
+            $practiceId = $validated['practice_id'];
+            $questions = $validated['questions'];
+
+            // Create Exercise (parent)
+            $exercise = \App\Models\Exercise::create([
+                'lesson_draft_id' => null,
+                'title' => 'Bài tập luyện tập',
+                'total_questions' => count($questions),
+            ]);
+
+            // Create ExerciseItem (child)
+            $exerciseItem = \App\Models\ExerciseItem::create([
+                'exercise_id' => $exercise->id,
+                'name' => $validated['exercise_name'],
+                'order' => 0,
+                'level' => $validated['exercise_level'],
+                'question_mix' => $this->countQuestionMix($questions),
+                'total_questions' => count($questions),
+            ]);
+
+            // Save each question
+            $questionCount = 0;
+            foreach ($questions as $idx => $question) {
+                // Save to exercise_questions table
+                \App\Models\ExerciseQuestion::create([
+                    'exercise_item_id' => $exerciseItem->id,
+                    'kind' => $question['kind'],
+                    'tieu_de' => $question['tieu_de'],
+                    'options' => $question['options'] ?? null,
+                    'cot_a' => $question['cot_a'] ?? null,
+                    'cot_b' => $question['cot_b'] ?? null,
+                    'dap_an_dung' => $question['dap_an_dung'] ?? null,
+                    'muc_do' => $question['muc_do'] ?? 'Dễ',
+                    'trich_dan_dap_an' => $question['trich_dan_dap_an'] ?? null,
+                    'order' => $idx,
+                ]);
+
+                // Save to question/answer tables
+                $this->saveQuestionToEditor($question, $exerciseItem->id, $practiceId, $validated);
+                $questionCount++;
+            }
+
+            Log::info('Student exercise created', [
+                'practice_id' => $practiceId,
+                'exercise_item_id' => $exerciseItem->id,
+                'question_count' => $questionCount,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Bài tập đã tạo ($questionCount câu hỏi)",
+                'exercise_item_id' => $exerciseItem->id,
+                'exercise_id' => $exercise->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error creating student exercise: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi tạo bài tập: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function countQuestionMix(array $questions): array
+    {
+        $mix = ['Dễ' => 0, 'Trung bình' => 0, 'Khó' => 0];
+        foreach ($questions as $q) {
+            $level = $q['muc_do'] ?? 'Dễ';
+            $mix[$level] = ($mix[$level] ?? 0) + 1;
+        }
+        return $mix;
+    }
+
+    public function saveLessonPracticeQuestions(Request $request) {
+        try {
+            $validated = $request->validate([
+                'practice_id' => 'required|integer',
+                'questions' => 'required|array',
+                'app_id' => 'nullable|integer',
+                'book_id' => 'nullable|integer',
+                'week_id' => 'nullable|integer',
+            ]);
+
+            $practiceId = $validated['practice_id'];
+            $questions = $validated['questions'];
+
+            // Delete old questions for this practice (common practice only)
+            \App\Models\QuestionEditor::where('practice_id', $practiceId)
+                ->whereNull('exercise_item_id')
+                ->delete();
+
+            // Save each question directly to question_editor (no Exercise hierarchy)
+            $questionCount = 0;
+            foreach ($questions as $idx => $question) {
+                $this->saveQuestionToEditor($question, null, $practiceId, $validated);
+                $questionCount++;
+            }
+
+            Log::info('Lesson practice questions saved', [
+                'practice_id' => $practiceId,
+                'question_count' => $questionCount,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Lưu thành công $questionCount câu hỏi luyện tập",
+                'count' => $questionCount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error saving lesson practice questions: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi lưu câu hỏi luyện tập: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getStudentsByClass(Request $request)
     {
         try {
@@ -781,6 +1082,148 @@ class LessonGeneratorController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Lỗi giao bài: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function assignedExercisesList(Request $request)
+    {
+        try {
+            $practiceId = $request->get('practice_id');
+            $appId = $request->get('app_id');
+            $bookId = $request->get('book_id');
+            $weekId = $request->get('week_id');
+
+            $practice = \App\Models\Practice::findOrFail($practiceId);
+            $practice->load('week.book.app');
+
+            // Get exercise items with question count from questionEditors
+            $items = \App\Models\ExerciseItem::where('practice_id', $practiceId)
+                ->where('app_id', $appId)
+                ->where('book_id', $bookId)
+                ->where('week_id', $weekId)
+                ->withCount('questionEditors')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function($item) {
+                    $item->total_questions = $item->question_editors_count;
+                    return $item;
+                });
+
+            return \Inertia\Inertia::render('Lesson/AssignedExercisesList', [
+                'query' => $request->query(),
+                'practice' => $practice,
+                'items' => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading assigned exercises: ' . $e->getMessage());
+            abort(500, 'Lỗi tải dữ liệu');
+        }
+    }
+
+    public function jsonAssignedExercisesList(Request $request)
+    {
+        try {
+            $practiceId = $request->get('practice_id');
+            $appId = $request->get('app_id');
+            $bookId = $request->get('book_id');
+            $weekId = $request->get('week_id');
+
+            $items = \App\Models\ExerciseItem::where('practice_id', $practiceId)
+                ->where('app_id', $appId)
+                ->where('book_id', $bookId)
+                ->where('week_id', $weekId)
+                ->withCount('questionEditors')
+                ->get()
+                ->map(function($item) {
+                    $item->total_questions = $item->question_editors_count;
+                    return $item;
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching assigned exercises: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi tải dữ liệu',
+            ], 500);
+        }
+    }
+
+    public function exerciseItemsList(Request $request, $exerciseId)
+    {
+        try {
+            $exercise = \App\Models\Exercise::findOrFail($exerciseId);
+            $exercise->load(['lessonDraft.practice.week.book.app', 'items']);
+
+            return \Inertia\Inertia::render('Lesson/ExerciseItemsList', [
+                'query' => $request->query(),
+                'exercise' => $exercise,
+                'items' => $exercise->items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading exercise items: ' . $e->getMessage());
+            abort(404, 'Không tìm thấy bài tập');
+        }
+    }
+
+    public function jsonExerciseItemsList(Request $request, $exerciseId)
+    {
+        try {
+            $items = \App\Models\ExerciseItem::where('exercise_id', $exerciseId)
+                ->withCount('exerciseQuestions')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $items,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching exercise items: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi tải dữ liệu',
+            ], 500);
+        }
+    }
+
+    public function exerciseQuestionsList(Request $request, $exerciseId, $itemId)
+    {
+        try {
+            $item = \App\Models\ExerciseItem::findOrFail($itemId);
+
+            // Query questions từ question_editor table theo exercise_item_id
+            $questions = \App\Models\QuestionEditor::where('exercise_item_id', $itemId)
+                ->get();
+
+            return \Inertia\Inertia::render('Lesson/ExerciseQuestionsList', [
+                'query' => $request->query(),
+                'item' => $item,
+                'questions' => $questions,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading exercise questions: ' . $e->getMessage());
+            abort(404, 'Không tìm thấy câu hỏi');
+        }
+    }
+
+    public function jsonExerciseQuestionsList(Request $request, $itemId)
+    {
+        try {
+            $questions = \App\Models\ExerciseQuestion::where('exercise_item_id', $itemId)->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $questions,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching exercise questions: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi tải dữ liệu',
             ], 500);
         }
     }

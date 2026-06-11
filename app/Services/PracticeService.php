@@ -39,8 +39,10 @@ class PracticeService
             $question = $value->questions->where('status', 'on');
             $value->has_questions = $question->isEmpty() ? 0 : 1;
             $value->count_question = $question->count();
-            $questionEditor = $value->questionEditors->where('is_visible', 'on')->first();
-            $value->has_question_editors = empty($questionEditor->id) ? 0 : 1;
+            // Count only common practice questions (exercise_item_id = NULL)
+            $questionEditor = $value->questionEditors->where('is_visible', 'on')->whereNull('exercise_item_id');
+            $value->has_question_editors = $questionEditor->isEmpty() ? 0 : 1;
+            $value->question_editors_count = $questionEditor->count();
             $value->has_questions_voice = $value->lesson_noi ? 1 : 0;
             return $value;
         });

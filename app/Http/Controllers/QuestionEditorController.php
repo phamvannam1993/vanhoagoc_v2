@@ -32,22 +32,46 @@ class QuestionEditorController extends Controller
     }
     public function index(Request $request, PracticeService $practiceService)
     {
-        // todo trong list cần trả thêm type của câu hỏi, loại game, mẫu, path của mẫu câu hỏi
-        $list = $practiceService->getAll($request->all());
-        $practiceId = $request->get('practice_id');
-        $practice = $this->practiceRepository->findOrFail($practiceId);
-        $practice->load('week.book.app');
-        return Inertia::render('Question/Exercise', [
-            'list' => $list,
-            'practice' => $practice,
-            'query' => $request->query()
-        ]);
+        try {
+            // todo trong list cần trả thêm type của câu hỏi, loại game, mẫu, path của mẫu câu hỏi
+            $list = $practiceService->getAll($request->all());
+            $practiceId = $request->get('practice_id');
+
+            if (!$practiceId) {
+                return Inertia::render('Question/Exercise', [
+                    'list' => [],
+                    'practice' => null,
+                    'query' => $request->query(),
+                    'error' => 'Thiếu practice_id'
+                ]);
+            }
+
+            $practice = $this->practiceRepository->find($practiceId);
+            if ($practice) {
+                $practice->load('week.book.app');
+            }
+
+            return Inertia::render('Question/Exercise', [
+                'list' => $list,
+                'practice' => $practice,
+                'query' => $request->query()
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('QuestionEditor index error: ' . $e->getMessage());
+            return Inertia::render('Question/Exercise', [
+                'list' => [],
+                'practice' => null,
+                'query' => $request->query(),
+                'error' => 'Lỗi tải dữ liệu: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function jsonList(Request $request, QuestionEditorService $questionEditorService)
     {
         $params = $request->all([
             'practice_id',
+            'exercise_item_id',
             'search',
             'pageSize'
         ]);

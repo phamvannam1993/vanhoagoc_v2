@@ -42,8 +42,10 @@ class SelectSampleController extends Controller
         }
 
         $practiceId = $request->get('practice_id');
-        $practice = $this->practiceRepository->findOrFail($practiceId);
-        $practice->load('week.book.app');
+        $practice = $practiceId ? $this->practiceRepository->find($practiceId) : null;
+        if ($practice) {
+            $practice->load('week.book.app');
+        }
 
         return Inertia::render($view, [
             'query' => $request->query(),
@@ -65,23 +67,38 @@ class SelectSampleController extends Controller
 
     public function getEditGame(Request $request, ExerciseService $exerciseService)
     {
-        $id = $request->get('id');
+  
+        // try {
+            $id = $request->get('id');
 
-        $result = $exerciseService->getDetailById($id);
+            if (!$id) {
+                return back()->with('error', 'Thiếu ID câu hỏi');
+            }
 
-        $view = $exerciseService->getViewPathForEdit($result['template']->type);
-        if(empty($view)) {
-            $view = 'SelectSample/EditDragDrop';
-        }
-        $questionEditor = $this->questionEditorRepository->findOrFail($id);
-        $questionEditor->load('practice.week.book.app');
+            $result = $exerciseService->getDetailById($id);
 
-        return Inertia::render($view, [
-            'query' => $request->query(),
-            'template' => $result['template'],
-            'data' => $result['data'],
-            'questionEditor' => $questionEditor
-        ]);
+            $view = $exerciseService->getViewPathForEdit($result['template']->type);
+            if(empty($view)) {
+                $view = 'SelectSample/EditDragDrop';
+            }
+
+            $questionEditor = $this->questionEditorRepository->find($id);
+            if (!$questionEditor) {
+                return back()->with('error', 'Không tìm thấy câu hỏi');
+            }
+            
+            $questionEditor->load('practice.week.book.app');
+
+            return Inertia::render($view, [
+                'query' => $request->query(),
+                'template' => $result['template'],
+                'data' => $result['data'],
+                'questionEditor' => $questionEditor
+            ]);
+        // } catch (\Exception $e) {
+        //     \Log::error('getEditGame error: ' . $e->getMessage());
+        //     return back()->with('error', 'Lỗi tải trang: ' . $e->getMessage());
+        // }
     }
 
     public function postEditGame(Request $request, ExerciseService $exerciseService)

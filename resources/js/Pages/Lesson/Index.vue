@@ -67,35 +67,37 @@ const columns = [
     title: 'Tên bài',
     dataIndex: 'name',
     key: 'name',
-    width: '25%',
+    width: '20%',
   },
   {
     title: 'Bài đọc',
     dataIndex: 'reading',
     key: 'reading',
-    width: '10%',
+    width: '9%',
   },
   {
     title: 'Video',
     key: 'video',
     dataIndex: 'video',
-    width: '10%',
+    width: '9%',
   },
   {
     title: 'Từ khóa video',
     key: 'keyVideo',
     dataIndex: 'keyVideo',
-    width: '10%',
+    width: '9%',
   },
     {
     title: 'Sách nói',
     key: 'voice',
     dataIndex: 'voice',
-    width: '10%',
+    width: '8%',
   },
   {
-    title: '',
+    title: 'Hành động',
     key: 'action',
+    width: '35%',
+    align: 'center',
   },
 ];
 const data = ref([]);
@@ -691,6 +693,7 @@ const copyLesson = async (to_week_id) => {
                 </Link>
               </template>
               <template v-else-if="column.key === 'action'">
+                <div class="flex flex-wrap gap-2 items-center justify-center">
                   <Link
                     :href="
                       route('lessons.aiCreate', {
@@ -703,29 +706,46 @@ const copyLesson = async (to_week_id) => {
                   >
                     <a-button
                       type="primary"
-                      size="large"
-                      :class="`btn-ai-create mr-2 whitespace-nowrap ${record.status === 'off' ? 'hide-class' : ''}`"
+                      size="small"
+                      :class="`btn-ai-create ${record.status === 'off' ? 'hide-class' : ''}`"
                     >
-                      ✨ Tạo bài học bằng AI
+                      ✨ Tạo AI
+                    </a-button>
+                  </Link>
+                  <Link
+                    :href="
+                      route('assignedExercises.index', {
+                        app_id: app_id,
+                        book_id: book_id,
+                        week_id: weekId,
+                        practice_id: record.id,
+                      })
+                    "
+                  >
+                    <a-button
+                      size="small"
+                      :class="`${record.status === 'off' ? 'hide-class' : ''}`"
+                    >
+                      📋 Giao bài
                     </a-button>
                   </Link>
                   <img
                     v-if="record.status === 'off'"
                     @click="showApp(record.id)"
-                    :class="`h-[24px] btn-view cursor-pointer ${record.status === 'off' ? 'hide-class' : ''}`"
+                    :class="`h-[20px] btn-view cursor-pointer ${record.status === 'off' ? 'hide-class' : ''}`"
                     src="/images/icon-eye-closed.png"
                     alt="eye-closed"
                   />
                   <img
                     v-else
                     @click="hideApp(record.id)"
-                    :class="`h-[24px] btn-view cursor-pointer ${record.status === 'off' ? 'hide-class' : ''}`"
+                    :class="`h-[20px] btn-view cursor-pointer ${record.status === 'off' ? 'hide-class' : ''}`"
                     src="/images/icon-eye-open.png"
                     alt="eys-open"
                   />
-                 <a-dropdown trigger="click">
+                  <a-dropdown trigger="click">
                     <a class="ant-dropdown-link" @click.prevent>
-                      <img src="/images/icon-dots.svg" class="h-[30px] cursor-pointer" alt="menu" />
+                      <img src="/images/icon-dots.svg" class="h-[20px] cursor-pointer" alt="menu" />
                     </a>
                     <template #overlay>
                       <a-menu>
@@ -754,9 +774,9 @@ const copyLesson = async (to_week_id) => {
                           </a-popconfirm>
                         </a-menu-item>
                       </a-menu>
-
                     </template>
                   </a-dropdown>
+                </div>
               </template>
             </template>
             <template #footer>

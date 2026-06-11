@@ -11,7 +11,7 @@ class ExerciseItem extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['exercise_id', 'name', 'order', 'level', 'question_mix', 'total_questions'];
+    protected $fillable = ['exercise_id', 'name', 'order', 'level', 'question_mix', 'total_questions', 'app_id', 'book_id', 'practice_id', 'week_id'];
 
     protected $casts = [
         'question_mix' => 'array',
@@ -25,5 +25,10 @@ class ExerciseItem extends Model
     public function questions(): HasMany
     {
         return $this->hasMany(ExerciseQuestion::class)->orderBy('order');
+    }
+
+    public function questionEditors(): HasMany
+    {
+        return $this->hasMany(QuestionEditor::class, 'exercise_item_id');
     }
 }

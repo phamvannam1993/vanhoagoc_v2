@@ -150,6 +150,9 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
                 Route::get('/bundle-status', [LessonGeneratorController::class, 'getBundleStatus'])->name('getBundleStatus');
                 Route::post('/save-audio-result', [LessonGeneratorController::class, 'saveAudioResult'])->name('saveAudioResult');
                 Route::post('/save-bundle-result', [LessonGeneratorController::class, 'saveBundleResult'])->name('saveBundleResult');
+                Route::post('/save-assign-exercises', [LessonGeneratorController::class, 'saveAssignExercises'])->name('saveAssignExercises');
+                Route::post('/save-lesson-practice-questions', [LessonGeneratorController::class, 'saveLessonPracticeQuestions'])->name('saveLessonPracticeQuestions');
+                Route::post('/create-student-exercise', [LessonGeneratorController::class, 'createStudentExercise'])->name('createStudentExercise');
                 Route::get('/students-by-class', [LessonGeneratorController::class, 'getStudentsByClass'])->name('studentsByClass');
                 Route::post('/assign-exercises', [LessonGeneratorController::class, 'assignExercises'])->name('assignExercises');
                 Route::post('/upload-multi-file', [LessonQuizGeneratorController::class, 'uploadMultiFile'])->name('uploadMultiFile');
@@ -266,6 +269,19 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
             Route::prefix('json')->name('json.')->group(function () {
                 Route::post('/create-game', [SelectSampleController::class, 'postCreateGame'])->name('postCreateGame');
                 Route::post('/edit-game', [SelectSampleController::class, 'postEditGame'])->name('postEditGame');
+            });
+        });
+
+        // Assigned Exercises (Bài giao học sinh)
+        Route::prefix('assigned-exercises')->name('assignedExercises.')->group(function () {
+            Route::get('/', [LessonGeneratorController::class, 'assignedExercisesList'])->name('index');
+            Route::get('/{exercise_id}/items', [LessonGeneratorController::class, 'exerciseItemsList'])->name('items');
+            Route::get('/{exercise_id}/items/{item_id}/questions', [LessonGeneratorController::class, 'exerciseQuestionsList'])->name('questions');
+
+            Route::prefix('json')->name('json.')->group(function () {
+                Route::get('/list', [LessonGeneratorController::class, 'jsonAssignedExercisesList'])->name('list');
+                Route::get('/{exercise_id}/items', [LessonGeneratorController::class, 'jsonExerciseItemsList'])->name('itemsList');
+                Route::get('/{item_id}/questions', [LessonGeneratorController::class, 'jsonExerciseQuestionsList'])->name('questionsList');
             });
         });
 

@@ -20,6 +20,14 @@ class QuestionEditorRepository extends AbstractRepository
             $query->where('question_editor.practice_id', $filters['practice_id']);
         }
 
+        // Filter by exercise_item_id if provided
+        if (!empty($filters['exercise_item_id'])) {
+            $query->where('question_editor.exercise_item_id', $filters['exercise_item_id']);
+        } else {
+            // Only show common practice exercises (no exercise_item_id)
+            $query->whereNull('question_editor.exercise_item_id');
+        }
+
         if (!empty($filters['search'])) {
             $query->where('question_editor.title', 'like', '%' . $filters['search'] . '%');
         }

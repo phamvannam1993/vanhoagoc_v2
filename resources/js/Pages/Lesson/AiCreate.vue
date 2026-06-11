@@ -59,7 +59,9 @@ const bundleIdRef = ref(null);
 const pollingIntervals = ref(new Map());
 const quizResult = ref(null); // bài tập giao học sinh (theo nhóm)
 const quizChung = ref(null); // bài luyện tập chung (1 bộ cho cả lớp)
+const hasAssigned = ref(false); // đã giao bài chưa
 const historyModal = ref(null);
+const assignModalRef = ref(null);
 
 const GRADES = ['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5'];
 const SUBJECTS = ['Tiếng Việt', 'Toán', 'Tự nhiên & Xã hội'];
@@ -211,7 +213,6 @@ const pollTaskStatus = (bundleId) => {
           clearInterval(interval);
           pollingIntervals.value.delete('bundle');
           showToast('✓ Tất cả nội dung đã tạo xong!');
-          await saveAll();
           return true;
         }
       }
@@ -319,32 +320,116 @@ const onAssignExercises = async (data) => {
       note: data.note,
       exercise_items: data.exerciseItems,
     });
-    if (response.data.success) showToast('✓ Giao bài thành công!');
-    else showToast('❌ ' + response.data.message);
+    if (response.data.success) {
+      showToast('✓ Giao bài thành công!');
+      hasAssigned.value = true;
+      assignModalRef.value?.closeModal();
+    } else {
+      showToast('❌ ' + response.data.message);
+    }
   } catch (error) {
     showToast('❌ Lỗi giao bài');
     console.error('Assign error:', error);
   }
 };
 
-const saveAll = async () => {
+const saveAll = async (e) => {
+  const mode = e?.mode;
+  console.log('=== saveAll called ===', { mode, quizResult: quizResult.value?.length, quizChung: quizChung.value?.length });
   const practice_id = props.practice_id || getQueryParam('practice_id');
-  if (!practice_id || !bundleIdRef.value) { showToast('❌ Không thể lưu - thiếu thông tin'); return; }
+  if (!practice_id || !bundleIdRef.value) { console.log('❌ Missing practice_id or bundleId'); showToast('❌ Không thể lưu - thiếu thông tin'); return; }
   try {
-    const response = await axios.post(route('lessons.json.saveBundleResult'), {
-      practice_id,
-      bundle_id: bundleIdRef.value,
-      app_id: props.app_id || getQueryParam('app_id'),
-      book_id: props.book_id || getQueryParam('book_id'),
-      week_id: props.week_id || getQueryParam('week_id'),
-    });
-    if (response.data.success) {
-      showToast('✓ Bài giảng đã lưu vào nháp');
-      setTimeout(() => { if (historyModal.value) historyModal.value.openModal(); }, 500);
+    if (mode === 'chung' && quizChung.value?.length) {
+      console.log('Saving common practice questions...');
+      // Save common practice mode - save to question_editor only
+      const allQuestions = quizChung.value.flatMap(b => b.realQuestions || []);
+      const response = await axios.post(route('lessons.json.saveLessonPracticeQuestions'), {
+        practice_id,
+        questions: allQuestions,
+        app_id: props.app_id || getQueryParam('app_id'),
+        book_id: props.book_id || getQueryParam('book_id'),
+        week_id: props.week_id || getQueryParam('week_id'),
+      });
+      if (response.data.success) {
+        showToast('✓ Bài luyện tập đã lưu');
+      }
+    } else if (mode === 'giao' && quizResult.value?.length) {
+      console.log('Saving assigned exercises...');
+      // Save assign mode - save current exercise items with all edits/deletes
+      const response = await axios.post(route('lessons.json.saveAssignExercises'), {
+        practice_id,
+        bundle_id: bundleIdRef.value,
+        exercise_items: quizResult.value,
+        app_id: props.app_id || getQueryParam('app_id'),
+        book_id: props.book_id || getQueryParam('book_id'),
+        week_id: props.week_id || getQueryParam('week_id'),
+      });
+      if (response.data.success) {
+        showToast('✓ Bài tập đã lưu');
+      }
+    } else {
+      // Normal save - save to lesson_drafts
+      const response = await axios.post(route('lessons.json.saveBundleResult'), {
+        practice_id,
+        bundle_id: bundleIdRef.value,
+        app_id: props.app_id || getQueryParam('app_id'),
+        book_id: props.book_id || getQueryParam('book_id'),
+        week_id: props.week_id || getQueryParam('week_id'),
+      });
+      if (response.data.success) {
+        showToast('✓ Bài giảng đã lưu vào nháp');
+        setTimeout(() => { if (historyModal.value) historyModal.value.openModal(); }, 500);
+      }
     }
   } catch (error) {
     console.error('Save error:', error);
     showToast('❌ Lỗi khi lưu');
+  }
+};
+
+const onSaveSingleExercise = async (e) => {
+  const { baiIdx, mode } = e;
+  console.log('=== onSaveSingleExercise called ===', { baiIdx, mode });
+  const practice_id = props.practice_id || getQueryParam('practice_id');
+  if (!practice_id || !bundleIdRef.value) { console.log('❌ Missing practice_id or bundleId'); showToast('❌ Không thể lưu - thiếu thông tin'); return; }
+  try {
+    if (mode === 'chung' && quizChung.value?.length) {
+      console.log('Saving single common practice exercise...');
+      // Save single exercise from common practice
+      const exercise = quizChung.value[baiIdx];
+      const questions = exercise.realQuestions || [];
+      const response = await axios.post(route('lessons.json.saveLessonPracticeQuestions'), {
+        practice_id,
+        questions,
+        app_id: props.app_id || getQueryParam('app_id'),
+        book_id: props.book_id || getQueryParam('book_id'),
+        week_id: props.week_id || getQueryParam('week_id'),
+      });
+      if (response.data.success) {
+        showToast(`✓ Bài ${baiIdx + 1} đã lưu`);
+      } else {
+        showToast('❌ ' + response.data.message);
+      }
+    } else if (mode === 'giao' && quizResult.value?.length) {
+      console.log('Saving single assigned exercise...');
+      // Save single exercise from assigned
+      const response = await axios.post(route('lessons.json.saveAssignExercises'), {
+        practice_id,
+        bundle_id: bundleIdRef.value,
+        exercise_items: [quizResult.value[baiIdx]], // Save only this exercise
+        app_id: props.app_id || getQueryParam('app_id'),
+        book_id: props.book_id || getQueryParam('book_id'),
+        week_id: props.week_id || getQueryParam('week_id'),
+      });
+      if (response.data.success) {
+        showToast(`✓ Bài ${baiIdx + 1} đã lưu`);
+      } else {
+        showToast('❌ ' + response.data.message);
+      }
+    }
+  } catch (error) {
+    showToast('❌ Lỗi lưu bài');
+    console.error('Save error:', error);
   }
 };
 
@@ -535,6 +620,8 @@ onUnmounted(() => {
                     mode="chung"
                     :bais="quizChung && quizChung.length ? quizChung : [{ level: 'Chung', mix: CHUNG_MIX }]"
                     :color="t.color"
+                    @save="saveAll"
+                    @save-single="onSaveSingleExercise"
                     @question-update="onChungUpdate"
                     @question-delete="onChungDelete"
                   />
@@ -548,6 +635,8 @@ onUnmounted(() => {
                     :total-bai="totalBai"
                     :total-cau="totalCau"
                     @assign="showAssign = true"
+                    @save="saveAll"
+                    @save-single="onSaveSingleExercise"
                     @question-update="onQuestionUpdate"
                     @question-delete="onQuestionDelete"
                   />
@@ -573,6 +662,7 @@ onUnmounted(() => {
       </div>
 
       <AssignModal
+        ref="assignModalRef"
         v-if="showAssign"
         :group-bai="assignGroupBai"
         :exercise-items="quizResult || []"

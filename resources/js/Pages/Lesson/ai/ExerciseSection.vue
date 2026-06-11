@@ -14,7 +14,7 @@ const props = defineProps({
   // 'chung' -> bài luyện tập chung (1 bộ dùng chung, không giao)
   mode: { type: String, default: 'giao' },
 });
-const emit = defineEmits(['assign', 'question-update', 'question-delete']);
+const emit = defineEmits(['assign', 'save', 'save-single', 'question-update', 'question-delete']);
 
 const open = ref(0);
 const editingKey = ref(null); // "bai-0-q-0"
@@ -37,6 +37,7 @@ const startEdit = (baiIdx, qIdx, q) => {
 const cancelEdit = () => { editingKey.value = null; editingData.value = null; };
 const saveEdit = (baiIdx, qIdx) => { emit('question-update', { baiIdx, qIdx, data: editingData.value }); cancelEdit(); };
 const deleteQuestion = (baiIdx, qIdx) => { emit('question-delete', { baiIdx, qIdx }); };
+const saveSingleExercise = (baiIdx) => { emit('save-single', { baiIdx, exerciseItem: props.bais[baiIdx], mode: props.mode }); };
 </script>
 
 <template>
@@ -191,13 +192,29 @@ const deleteQuestion = (baiIdx, qIdx) => { emit('question-delete', { baiIdx, qId
               </div>
             </template>
           </div>
+          <!-- Footer for individual exercise save -->
+          <div class="bai-footer" style="display: flex; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+            <button class="btn btn-sm" @click="() => { console.log('click save single', i); saveSingleExercise(i); }" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">
+              <Icon name="save" :size="14" style="margin-right: 4px;" />Lưu bài {{ i + 1 }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <div v-if="mode === 'giao'" class="acc-actions">
       <span class="foot-info"><b>{{ totalBai }}</b> bài giao cho <b>3</b> nhóm học sinh</span>
-      <button class="btn btn-assign" @click="emit('assign')"><Icon name="send" :size="15" />Giao bài cho học sinh</button>
+      <div style="display: flex; gap: 10px">
+        <button class="btn" @click="() => { console.log('click save giao'); emit('save', { mode: 'giao' }); }"><Icon name="save" :size="15" />Lưu bài</button>
+        <button class="btn btn-assign" @click="() => { console.log('click assign'); emit('assign'); }"><Icon name="send" :size="15" />Giao bài cho học sinh</button>
+      </div>
+    </div>
+
+    <div v-if="mode === 'chung'" class="acc-actions">
+      <span class="foot-info"><b>{{ totalBai }}</b> bài luyện tập chung</span>
+      <div style="display: flex; gap: 10px">
+        <button class="btn" @click="() => { console.log('click save chung'); emit('save', { mode: 'chung' }); }"><Icon name="save" :size="15" />Lưu bài</button>
+      </div>
     </div>
   </div>
 </template>

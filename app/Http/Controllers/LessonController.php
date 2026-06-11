@@ -52,7 +52,6 @@ class LessonController extends BaseModuleController
         $params = $request->all();
 
         $list = $this->practiceService->getList($params);
-        $list->loadCount('questionEditors');
         return response()->json([
             'status' => true,
             'data' => $list
