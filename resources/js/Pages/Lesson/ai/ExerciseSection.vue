@@ -1,64 +1,79 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import Icon from '@/Components/AiLessonIcon.vue';
 import LvlBadge from './LvlBadge.vue';
-import { buildBaiQuestions, mixStr, KIND_LABEL } from './data.js';
+import { buildBaiQuestions, mixStr, KIND_LABEL, LEVEL_STYLE, SUG_NHOM } from './data.js';
 
 const props = defineProps({
   bais: { type: Array, default: () => [] },
-  questions: { type: Array, default: () => [] },
   color: { type: String, default: '#16a34a' },
+  counts: { type: Object, default: () => ({}) },
   totalBai: { type: Number, default: 0 },
   totalCau: { type: Number, default: 0 },
+  // 'giao'  -> bài tập giao học sinh (bản đồ nhóm + giao bài)
+  // 'chung' -> bài luyện tập chung (1 bộ dùng chung, không giao)
+  mode: { type: String, default: 'giao' },
 });
 const emit = defineEmits(['assign', 'question-update', 'question-delete']);
 
 const open = ref(0);
-const editingKey = ref(null); // "bai-0-q-0" format
+const editingKey = ref(null); // "bai-0-q-0"
 const editingData = ref(null);
 
 const toggle = (i) => { open.value = open.value === i ? -1 : i; };
 const letter = (i) => String.fromCharCode(65 + i);
 
+const giaoMap = computed(() => [
+  { grp: 'Nhóm yếu', level: 'Dễ', baiName: 'Bài dễ', n: props.counts['Dễ'] || 0 },
+  { grp: 'Nhóm khá', level: 'Trung bình', baiName: 'Bài trung bình', n: props.counts['Trung bình'] || 0 },
+  { grp: 'Nhóm giỏi', level: 'Khó', baiName: 'Bài khó', n: props.counts['Khó'] || 0 },
+]);
+const lv = (level) => LEVEL_STYLE[level] || LEVEL_STYLE['Dễ'];
+
 const startEdit = (baiIdx, qIdx, q) => {
   editingKey.value = `bai-${baiIdx}-q-${qIdx}`;
   editingData.value = JSON.parse(JSON.stringify(q));
 };
-
-const cancelEdit = () => {
-  editingKey.value = null;
-  editingData.value = null;
-};
-
-const saveEdit = (baiIdx, qIdx) => {
-  emit('question-update', { baiIdx, qIdx, data: editingData.value });
-  cancelEdit();
-};
-
-const deleteQuestion = (baiIdx, qIdx) => {
-  emit('question-delete', { baiIdx, qIdx });
-};
+const cancelEdit = () => { editingKey.value = null; editingData.value = null; };
+const saveEdit = (baiIdx, qIdx) => { emit('question-update', { baiIdx, qIdx, data: editingData.value }); cancelEdit(); };
+const deleteQuestion = (baiIdx, qIdx) => { emit('question-delete', { baiIdx, qIdx }); };
 </script>
 
 <template>
   <div>
-    <div class="map-note">
-      <Icon name="info" :size="15" />
-      <span>Giao tự động theo mức độ của bài:</span>
-      <span class="map-pair"><LvlBadge level="Dễ" /><Icon name="chevRight" :size="13" /><b>Nhóm yếu</b></span>
-      <span class="map-pair"><LvlBadge level="Trung bình" /><Icon name="chevRight" :size="13" /><b>Nhóm khá</b></span>
-      <span class="map-pair"><LvlBadge level="Khó" /><Icon name="chevRight" :size="13" /><b>Nhóm giỏi</b></span>
-    </div>
+    <!-- chỉ ở chế độ giao: mô tả + bản đồ nhóm -->
+    <template v-if="mode === 'giao'">
+      <p class="sec-sub">Các bài tập tạo theo mức độ, giao cho từng nhóm học sinh phù hợp. Mỗi bài 10 câu, có thể sửa / xoá trước khi giao.</p>
+      <div class="map-note">
+        <Icon name="info" :size="15" />
+        <span>Tự động giao theo mức độ của bài:</span>
+        <span class="map-pair"><LvlBadge level="Dễ" /><Icon name="chevRight" :size="13" /><b>Nhóm yếu</b></span>
+        <span class="map-pair"><LvlBadge level="Trung bình" /><Icon name="chevRight" :size="13" /><b>Nhóm khá</b></span>
+        <span class="map-pair"><LvlBadge level="Khó" /><Icon name="chevRight" :size="13" /><b>Nhóm giỏi</b></span>
+      </div>
+      <div class="giao-grid">
+        <div v-for="g in giaoMap" :key="g.grp" class="giao-card" :style="{ borderColor: lv(g.level).bg }">
+          <div class="gc-grp"><span class="gc-grp-ic" :style="{ background: lv(g.level).bg, color: lv(g.level).color }"><Icon name="users" :size="16" /></span>{{ g.grp }}</div>
+          <div class="gc-arrow"><Icon name="chevDown" :size="16" /></div>
+          <div class="gc-bai" :style="{ background: lv(g.level).bg, color: lv(g.level).color }"><LvlBadge :level="g.level" />{{ g.baiName }}</div>
+          <div class="gc-stat"><b>{{ g.n }}</b> bài · <b>{{ g.n * 10 }}</b> câu</div>
+        </div>
+      </div>
+    </template>
+
+    <template v-if="mode === 'chung'">
+      <p class="sec-sub">Một bộ <b>10 câu hỏi</b> (3 Dễ · 4 TB · 3 Khó) dùng chung cho <b>cả lớp</b>. Bạn có thể sửa hoặc xoá từng câu.</p>
+    </template>
 
     <div class="bai-list">
       <div v-for="(b, i) in bais" :key="i" class="bai-item" :class="{ open: open === i }">
         <button class="bai-head" @click="toggle(i)">
           <span class="bai-idx" :style="{ background: color }">{{ i + 1 }}</span>
           <div class="bai-head-main">
-            <span class="bai-name">Bài tập {{ i + 1 }}</span>
-            <span class="bai-sub">10 câu · {{ mixStr(b.mix) }}</span>
+            <span class="bai-name">{{ mode === 'chung' ? 'Bài luyện tập chung' : 'Bài ' + (i + 1) }}</span>
+            <span class="bai-sub">{{ (b.realQuestions?.length || 10) }} câu · {{ mixStr(b.mix) }}<template v-if="mode === 'giao'"> · giao {{ SUG_NHOM[b.level] }}</template></span>
           </div>
-          <LvlBadge :level="b.level" />
+          <LvlBadge v-if="mode === 'giao'" :level="b.level" />
           <span class="acc-caret"><Icon name="chevDown" :size="17" /></span>
         </button>
         <div v-if="open === i" class="bai-body">
@@ -69,7 +84,7 @@ const deleteQuestion = (baiIdx, qIdx) => {
             <span class="mix-chip" :style="{ background: '#fde8e6', color: '#c2410c' }">{{ b.mix['Khó'] }} Khó</span>
           </div>
           <div class="q-list" style="margin-top: 12px">
-            <!-- Real questions from API -->
+            <!-- Câu hỏi thật từ API -->
             <template v-if="b.realQuestions && b.realQuestions.length > 0">
               <div v-for="(q, n) in b.realQuestions" :key="`real-${n}`" class="q-card inc">
                 <div class="q-head">
@@ -77,19 +92,17 @@ const deleteQuestion = (baiIdx, qIdx) => {
                   <span class="q-kind">{{ q.kind === 'chon' ? 'Chọn' : q.kind === 'sx' ? 'Sắp xếp' : 'Nối' }}</span>
                   <div class="q-text">{{ q.tieu_de || 'Câu hỏi' }}</div>
                   <LvlBadge :level="q.muc_do" />
-                  <div class="q-actions">
-                    <button class="btn-icon" @click="startEdit(props.bais.indexOf(b), n, q)" title="Sửa"><Icon name="edit" :size="16" /></button>
-                    <button class="btn-icon btn-delete" @click="deleteQuestion(props.bais.indexOf(b), n)" title="Xóa"><Icon name="trash" :size="16" /></button>
+                  <div class="q-acts">
+                    <button class="q-mini edit" @click="startEdit(i, n, q)"><Icon name="edit" :size="13" />Sửa</button>
+                    <button class="q-mini del" @click="deleteQuestion(i, n)"><Icon name="trash" :size="13" /></button>
                   </div>
                 </div>
-                <!-- Edit form inline -->
-                <div v-if="editingKey === `bai-${props.bais.indexOf(b)}-q-${n}`" class="q-edit-form">
+                <!-- form sửa inline -->
+                <div v-if="editingKey === `bai-${i}-q-${n}`" class="q-edit-form">
                   <div class="form-group">
                     <label>Câu hỏi</label>
                     <textarea v-model="editingData.tieu_de" class="form-input" placeholder="Nhập tiêu đề câu hỏi" rows="2"></textarea>
                   </div>
-
-                  <!-- Multiple Choice Options -->
                   <div v-if="editingData.kind === 'chon'" class="form-group">
                     <label>Các lựa chọn</label>
                     <div v-for="(opt, idx) in editingData.options" :key="idx" class="opt-edit">
@@ -101,8 +114,6 @@ const deleteQuestion = (baiIdx, qIdx) => {
                       <input v-model="editingData.dap_an_dung" class="form-input" placeholder="A" maxlength="1" style="max-width: 80px" />
                     </div>
                   </div>
-
-                  <!-- Sequencing Options -->
                   <div v-else-if="editingData.kind === 'sx'" class="form-group">
                     <label>Các mục sắp xếp</label>
                     <div v-for="(item, idx) in editingData.options" :key="idx" class="opt-edit">
@@ -110,8 +121,6 @@ const deleteQuestion = (baiIdx, qIdx) => {
                       <textarea v-model="editingData.options[idx]" class="form-input" placeholder="Nhập mục sắp xếp" rows="1"></textarea>
                     </div>
                   </div>
-
-                  <!-- Matching Options -->
                   <div v-else-if="editingData.kind === 'noi'" class="form-group">
                     <div class="match-cols">
                       <div>
@@ -128,27 +137,22 @@ const deleteQuestion = (baiIdx, qIdx) => {
                       </div>
                     </div>
                   </div>
-
                   <div class="form-actions">
-                    <button class="btn btn-primary btn-sm" @click="saveEdit(props.bais.indexOf(b), n)"><Icon name="check" :size="14" :stroke="3" />Lưu</button>
+                    <button class="btn btn-primary btn-sm" @click="saveEdit(i, n)"><Icon name="check" :size="14" :stroke="3" />Lưu</button>
                     <button class="btn btn-sm" @click="cancelEdit"><Icon name="x" :size="14" />Huỷ</button>
                   </div>
                 </div>
-
-                <!-- Display content -->
+                <!-- hiển thị nội dung -->
                 <template v-else>
-                  <!-- Multiple Choice -->
                   <div v-if="q.kind === 'chon' && q.options" class="q-opts">
                     <div v-for="(o, oi) in q.options" :key="oi" class="q-opt" :class="{ correct: letter(oi) === q.dap_an_dung }">
                       <span class="oi">{{ letter(oi) }}</span>{{ o }}
                       <span v-if="letter(oi) === q.dap_an_dung" class="ans-mark"><Icon name="check" :size="13" :stroke="3" />Đáp án</span>
                     </div>
                   </div>
-                  <!-- Sequencing -->
                   <div v-else-if="q.kind === 'sx' && q.options" class="q-seq">
                     <div v-for="(s, si) in q.options" :key="si" class="si"><span class="ord">{{ si + 1 }}</span>{{ s }}</div>
                   </div>
-                  <!-- Matching -->
                   <div v-else-if="q.kind === 'noi' && q.cot_a && q.cot_b" class="q-match">
                     <template v-for="(item, pi) in q.cot_a" :key="pi">
                       <div class="mcell">{{ item }}</div>
@@ -159,7 +163,7 @@ const deleteQuestion = (baiIdx, qIdx) => {
                 </template>
               </div>
             </template>
-            <!-- Mock questions fallback -->
+            <!-- fallback câu hỏi mẫu khi chưa có dữ liệu thật -->
             <template v-else>
               <div v-for="(q, n) in buildBaiQuestions(b.mix)" :key="q.uid" class="q-card inc">
                 <div class="q-head">
@@ -191,153 +195,37 @@ const deleteQuestion = (baiIdx, qIdx) => {
       </div>
     </div>
 
-    <div class="acc-actions">
-      <span class="foot-info"><b>{{ totalBai }}</b> bài tập · <b>{{ totalCau }}</b> câu hỏi</span>
+    <div v-if="mode === 'giao'" class="acc-actions">
+      <span class="foot-info"><b>{{ totalBai }}</b> bài giao cho <b>3</b> nhóm học sinh</span>
       <button class="btn btn-assign" @click="emit('assign')"><Icon name="send" :size="15" />Giao bài cho học sinh</button>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.q-actions {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-
-  .btn-icon {
-    width: 32px;
-    height: 32px;
-    border: 1px solid #e5e7eb;
-    background: white;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    color: #6b7280;
-
-    &:hover {
-      background: #f3f4f6;
-      border-color: #d1d5db;
-      color: #374151;
-    }
-
-    &.btn-delete {
-      &:hover {
-        background: #fef2f2;
-        border-color: #fca5a5;
-        color: #dc2626;
-      }
-    }
-  }
-}
-
 .q-edit-form {
   padding: 12px;
   background: #f9fafb;
   border-top: 1px solid #e5e7eb;
   border-radius: 0 0 6px 6px;
 
-  .form-group {
-    margin-bottom: 12px;
-
-    label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 6px;
-      color: #374151;
-    }
-  }
-
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
   .form-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    resize: vertical;
-    transition: all 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
+    width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;
+    font-size: 14px; font-family: inherit; resize: vertical; transition: all 0.2s;
   }
-
-  .opt-edit {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    align-items: flex-start;
-
-    .opt-label {
-      font-weight: 500;
-      padding-top: 8px;
-      min-width: 24px;
-      color: #6b7280;
-    }
-
-    .form-input {
-      flex: 1;
-    }
-  }
-
-  .match-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-
-    > div {
-      label {
-        display: block;
-        font-size: 13px;
-        font-weight: 500;
-        margin-bottom: 6px;
-        color: #374151;
-      }
-    }
-  }
-
-  .form-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-
-    .btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      font-size: 13px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &.btn-sm {
-        background: white;
-        border: 1px solid #e5e7eb;
-        color: #374151;
-
-        &:hover {
-          background: #f3f4f6;
-          border-color: #d1d5db;
-        }
-      }
-
-      &.btn-primary {
-        background: #3b82f6;
-        color: white;
-
-        &:hover {
-          background: #2563eb;
-        }
-      }
-    }
-  }
+  .form-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+  .opt-edit { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+  .opt-edit .opt-label { font-weight: 500; padding-top: 8px; min-width: 24px; color: #6b7280; }
+  .opt-edit .form-input { flex: 1; }
+  .match-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .match-cols > div label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
+  .form-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .form-actions .btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; border-radius: 6px; cursor: pointer; }
+  .form-actions .btn.btn-sm { background: white; border: 1px solid #e5e7eb; color: #374151; }
+  .form-actions .btn.btn-sm:hover { background: #f3f4f6; border-color: #d1d5db; }
+  .form-actions .btn.btn-primary { background: #3b82f6; color: white; border: none; }
+  .form-actions .btn.btn-primary:hover { background: #2563eb; }
 }
 </style>
