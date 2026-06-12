@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from "@inertiajs/vue3";
-import SchoolLayout from "@/Layouts/SchoolLayout.vue"";
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { SearchOutlined } from "@ant-design/icons-vue";
 import { ref, onMounted, defineProps, nextTick } from "vue";
 import { Link } from "@inertiajs/vue3";

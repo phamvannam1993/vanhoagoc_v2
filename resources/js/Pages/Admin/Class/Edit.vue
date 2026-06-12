@@ -1,13 +1,12 @@
 <script setup>
 import { Head, useForm, usePage } from "@inertiajs/vue3";
-import SchoolLayout from "@/Layouts/SchoolLayout.vue"";
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import * as yup from "yup";
 import InputError from "@/Components/InputError.vue";
 import { Link } from "@inertiajs/vue3";
 import { useToast } from "vue-toastification";
 import { ref } from "vue";
-import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 
 const props = defineProps({
     record: {

@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from "@inertiajs/vue3";
-import SchoolLayout from "@/Layouts/SchoolLayout.vue"";
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import Editor from "@tinymce/tinymce-vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import * as yup from "yup";
