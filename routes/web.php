@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\CompetencyController;
 use App\Http\Controllers\Admin\CompetencyComponentController;
 use App\Http\Controllers\Admin\EducationalContentController;
+use App\Http\Controllers\Admin\TeachingController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Response;
 
@@ -378,6 +379,10 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
         });
 
         Route::middleware(['checkClassRole'])->group(function () {
+            // Trang trung gian: chọn Lớp/Đơn vị trước khi Giao bài / Xem kết quả
+            Route::get('giao-bai', [TeachingController::class, 'assign'])->name('teaching.assign');
+            Route::get('ket-qua', [TeachingController::class, 'result'])->name('teaching.result');
+
             Route::prefix('class')->name('class.')->group(function () {
                 Route::get('/', [ClassController::class, 'index'])->name('index');
                 Route::get('/create', [ClassController::class, 'create'])->name('create');
