@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from "@inertiajs/vue3";
-import MasterLayout from "@/Layouts/MasterLayout.vue";
+import SchoolLayout from "@/Layouts/SchoolLayout.vue"";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import * as yup from "yup";
 import InputError from "@/Components/InputError.vue";
@@ -699,7 +699,7 @@ const getAnswerMaxLength = () => {
 <template>
     <Head title="Create Question Arrange" />
 
-    <MasterLayout :breadcrumbs=breadcrumbs>
+    <SchoolLayout :breadcrumbs=breadcrumbs>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Create Question Arrange
@@ -1279,7 +1279,7 @@ const getAnswerMaxLength = () => {
                 <p class="mt-4 text-lg font-medium">Đang tải lên...</p>
             </div>
         </a-modal>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style lang="scss">
 .custom-height {

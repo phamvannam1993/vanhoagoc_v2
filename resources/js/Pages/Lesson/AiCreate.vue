@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onUnmounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import Icon from '@/Components/AiLessonIcon.vue';
 import NumStepper from './ai/NumStepper.vue';
 import CheckBox from './ai/CheckBox.vue';
@@ -446,7 +446,7 @@ onUnmounted(() => {
 
 <template>
   <Head title="Tạo bài học bằng AI" />
-  <MasterLayout :breadcrumbs="breadcrumbs">
+  <SchoolLayout :breadcrumbs="breadcrumbs">
     <div class="ai-flow">
       <div class="page">
         <div class="flow-head">
@@ -674,7 +674,7 @@ onUnmounted(() => {
       <LessonDraftHistory ref="historyModal" :practice-id="parseInt(props.practice_id) || parseInt(getQueryParam('practice_id'))" />
       <div v-if="toast" class="toast"><Icon name="check" :size="16" :stroke="3" />{{ toast }}</div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 
 <style lang="scss">

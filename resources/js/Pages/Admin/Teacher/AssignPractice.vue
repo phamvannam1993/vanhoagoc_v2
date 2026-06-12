@@ -257,7 +257,8 @@ const loadData = async () => {
     const params = {
         page: pagination.value.current,
         search: formFilter.value.search,
-        class_id: class_id
+        class_id: class_id,
+        student_id: student_id
     };
     const res = await axios.get(route("admins.practices.json.getLesson", params));
 

@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from "@inertiajs/vue3";
-import MasterLayout from "@/Layouts/MasterLayout.vue";
+import SchoolLayout from "@/Layouts/SchoolLayout.vue"";
 import Editor from "@tinymce/tinymce-vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import * as yup from "yup";
@@ -263,7 +263,7 @@ const handleUploadedImages = async (images) => {
 
 <template>
     <Head title="Create Reading" />
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">App</h2>
         </template>
@@ -415,7 +415,7 @@ const handleUploadedImages = async (images) => {
                 <p class="mt-4 text-lg font-medium">Đang tải lên...</p>
             </div>
         </a-modal>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped>
 .tox-statusbar {

@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 
 defineProps({
   query: Object,
@@ -13,7 +13,7 @@ const searchTerm = ref('');
 </script>
 
 <template>
-  <MasterLayout>
+  <SchoolLayout>
   <Head title="Bài tập giao học sinh" />
   <div>
     <!-- Breadcrumb -->
@@ -69,7 +69,7 @@ const searchTerm = ref('');
     </div>
     </div>
   </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 
 <style scoped>

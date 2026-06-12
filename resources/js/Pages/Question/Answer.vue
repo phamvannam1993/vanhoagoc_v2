@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { Form } from 'vee-validate';
 import { reactive, ref } from 'vue';
 import { useToast } from 'vue-toastification';
@@ -67,7 +67,7 @@ const goBack = () => {
 <template>
     <Head title="Create Answer Question" />
 
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 App
@@ -174,7 +174,7 @@ const goBack = () => {
                 </Form>
             </div>
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style lang="scss">
 .custom-checkbox .ant-checkbox-inner {

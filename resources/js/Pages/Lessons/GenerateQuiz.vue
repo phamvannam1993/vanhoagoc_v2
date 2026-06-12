@@ -2,7 +2,7 @@
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useToast } from 'vue-toastification';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import Icon from '@/Components/AiLessonIcon.vue';
 import CheckBox from '@/Pages/Lesson/ai/CheckBox.vue';
 import LessonDraftHistory from "@/Pages/Lesson/LessonDraftHistory.vue";
@@ -494,7 +494,7 @@ const saveEditText = () => {
 <template>
   <Head title="Tạo bài giảng" />
 
-  <MasterLayout>
+  <SchoolLayout>
     <div class="ai-flow">
       <div class="page">
         <!-- Header -->
@@ -1001,7 +1001,7 @@ const saveEditText = () => {
         :practice-id="parseInt(props.practice_id || getQueryParam('practice_id'))"
       />
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 
 <style lang="scss" scoped>

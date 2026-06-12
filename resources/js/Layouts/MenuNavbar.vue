@@ -2,10 +2,7 @@
     <!-- ===================== DESKTOP SIDEBAR ===================== -->
     <aside class="hidden md:flex md:flex-col md:w-64 md:shrink-0 md:h-screen md:sticky md:top-0 bg-white border-r border-gray-200 z-40">
         <!-- Brand -->
-        <Link :href="route('apps.dashboard')" class="flex items-center gap-3 h-16 px-5 bg-[#041C38] shrink-0">
-            <img src="/images/logo-new.png" alt="logo" class="h-8 w-auto" />
-            <span class="text-white font-bold text-[17px] leading-tight">Văn Hoá <span class="text-[#E0A43B]">Gốc</span></span>
-        </Link>
+     
 
         <!-- Nav groups -->
         <nav class="flex-1 overflow-y-auto py-3">

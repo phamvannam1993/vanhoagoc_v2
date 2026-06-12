@@ -3,7 +3,7 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 
 const toast = useToast();
 const page = usePage();
@@ -32,7 +32,7 @@ async function submit() {
 
 <template>
     <Head title="Sửa PCNL" />
-    <MasterLayout>
+    <SchoolLayout>
         <div class="app-page py-4">
             <div class="content-page mx-auto w-full md:w-6/12">
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">Sửa Phẩm chất Năng lực</h1>
@@ -56,5 +56,5 @@ async function submit() {
                 </div>
             </div>
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>

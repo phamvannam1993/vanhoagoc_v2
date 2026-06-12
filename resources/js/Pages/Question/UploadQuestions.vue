@@ -1,6 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ref, computed } from 'vue';
 import { useToast } from 'vue-toastification';
 
@@ -419,7 +419,7 @@ const updateEditCotBValue = (itemIdx, value) => {
 <template>
   <Head title="Upload Câu hỏi" />
 
-  <MasterLayout>
+  <SchoolLayout>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">App</h2>
     </template>
@@ -775,7 +775,7 @@ const updateEditCotBValue = (itemIdx, value) => {
         </div>
       </div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 
 <style scoped>

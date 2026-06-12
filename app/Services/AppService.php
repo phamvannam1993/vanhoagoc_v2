@@ -55,40 +55,44 @@ class AppService
     public function getList($data, $withoutPoint = false)
     {
         [$appIds, $parentAppIds] = $this->userAccessModuleService->getAppIds();
-        $list = $this->appRepository->searchByFilters($data, array_merge($appIds, $parentAppIds), $withoutPoint); //Các app được phép truy cập bao gồm cả app chỉ được xem
+        $list = $this->appRepository->searchByFilters($data, array_merge($appIds, $parentAppIds), $withoutPoint);
         $user = auth()->user();
+
+        // Bulk load data to avoid N+1 queries
+        $appIdsList = $list->pluck('id')->toArray();
+
+        $novels = \DB::table('novels')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
+        $comments = \DB::table('comments')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
+        $classes = \DB::table('classes')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
+        $books = \DB::table('book')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
+
         foreach ($list as $item) {
             $hasResult = !$withoutPoint ? $item->classes->some(function ($class) {
                 return $class->point->isNotEmpty();
             }) : true;
-        
+
             $item->has_result = $hasResult;
-        
-            $isBook = $this->bookRepository->first(["app_id" => $item->id]);
-            $isNovel = $this->novelRepository->first(["app_id" => $item->id]);
-            $isComment = $this->commentRepository->first(["app_id" => $item->id]);
-            $isClass = $this->classesRepository->first(["app_id" => $item->id]);
-        
-            $item->is_book = $isBook ? true : false;
-            $item->is_novel = $isNovel ? true : false;
+            $item->is_book = isset($books[$item->id]);
+            $item->is_novel = isset($novels[$item->id]);
+            $item->is_comment = isset($comments[$item->id]);
+            $item->isClass = isset($classes[$item->id]);
+
             $item->is_show_comment = in_array($user->user_type_id, [
                 UserTypeConstant::TYPE_ADMIN,
                 UserTypeConstant::TYPE_EDITOR,
                 UserTypeConstant::TYPE_TEACHER,
                 UserTypeConstant::TYPE_TEACHER_ADMIN
             ]);
-        
-            $item->is_comment = $isComment ? true : false;
-            $item->isClass = $isClass ? true : false;
+
             $item->img = $item->img ? Helper::getCloudFront($item->img) : null;
-        
+
             if (in_array($item->id, $parentAppIds)) {
                 $item->access_permission = UserAccessModuleConstant::PERMISSION_VIEW;
             } else {
                 $item->access_permission = UserAccessModuleConstant::PERMISSION_FULL;
             }
         }
-        
+
         return $list;
     }
 

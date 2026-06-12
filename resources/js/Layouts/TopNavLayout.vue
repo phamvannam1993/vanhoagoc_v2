@@ -1,24 +1,25 @@
 <script setup>
-import { usePage, Link } from '@inertiajs/vue3';
-import { useToast } from "vue-toastification";
-import MenuNavbar from './MenuNavbar.vue'
-import Breadcrumb from '@/Layouts/Breadcrumb.vue';
+import { ref } from 'vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-
-const props = defineProps({
-    breadcrumbs: {},
-});
+import { Link, usePage } from '@inertiajs/vue3';
+import Breadcrumb from '@/Layouts/Breadcrumb.vue';
+import { useToast } from 'vue-toastification';
 
 const toast = useToast();
 const page = usePage();
 const user = page.props.auth.user;
+const showingNavigationDropdown = ref(false);
+
+const props = defineProps({
+    breadcrumbs: {},
+});
 </script>
 
 <template>
     <div class="min-h-screen flex flex-col">
-        <!-- Top Navbar -->
-        <nav class="bg-[#041C38] border-b border-gray-200 sticky top-0 z-40 w-full">
+        <!-- Full-width top navbar (NO SIDEBAR) -->
+        <nav class="bg-[#041C38] border-b border-gray-200 w-full">
             <div class="flex h-16 justify-between items-center px-4 sm:px-6 lg:px-8">
                     <!-- Left: Tool Editor -->
                     <Link :href="route('apps.dashboard')" class="flex items-center gap-3 shrink-0">
@@ -58,19 +59,16 @@ const user = page.props.auth.user;
             </div>
         </nav>
 
-        <!-- Main Content with Sidebar -->
-        <div class="flex flex-1 bg-gray-50">
-            <MenuNavbar/>
-            <div class="flex-1 min-w-0 flex flex-col">
-                <Breadcrumb :breadcrumbs="props.breadcrumbs" />
-                <!-- Page Content -->
-                <main class="flex-1 bg-white">
-                    <slot />
-                </main>
-            </div>
-        </div>
+        <!-- Breadcrumb -->
+        <Breadcrumb :breadcrumbs="props.breadcrumbs" />
+
+        <!-- Page Content -->
+        <main class="flex-1 bg-white">
+            <slot />
+        </main>
     </div>
 </template>
+
 <style lang="scss">
 .custom-bg {
     background-color: #cccccc;
@@ -79,7 +77,7 @@ const user = page.props.auth.user;
     opacity: 30%;
 }
 .ant-input, .ant-input-affix-wrapper, .ant-input-textarea, .ant-select-selector {
-    border-width: 1px !important; /* Đảm bảo ghi đè CSS của Ant Design */
+    border-width: 1px !important;
     border-color: black !important;
 }
 .ant-input-textarea-show-count {
@@ -87,23 +85,5 @@ const user = page.props.auth.user;
     padding: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
-}
-/* Tùy biến toàn bộ khung date picker */
-.ant-picker {
-    border-width: 1px !important;
-    border-color: black !important;
-    border-radius: 4px !important;
-}
-
-/* Tùy biến input bên trong date picker */
-.ant-picker-input > input {
-    color: black !important;
-}
-
-/* Tùy biến hover hoặc focus nếu cần */
-.ant-picker:hover,
-.ant-picker-focused {
-    border-color: #1890ff !important; /* hoặc màu bạn muốn */
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
 }
 </style>

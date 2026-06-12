@@ -57,10 +57,40 @@ class PracticeController extends Controller
 
     public function getLesson(Request $request)
     {
-        $userId = Auth::user()->id;
-        $class = Classes::where('user_id', $userId)->first();
-        $appId = $class->app_id;
         $classId = $request->class_id;
+        $studentId = $request->student_id;
+        $userId = Auth::user()->id;
+
+        // If student_id is provided, get app from student's profile
+        if ($studentId) {
+            $student = User::find($studentId);
+            if (!$student) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Không tìm thấy học sinh'
+                ]);
+            }
+            // Get student's app from their user classes
+            $userClass = \App\Models\UserClass::where('user_id', $studentId)->first();
+            if (!$userClass) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Không tìm thấy app của học sinh'
+                ]);
+            }
+            $appId = $userClass->app_id;
+        } else {
+            // Otherwise get from current user's class
+            $class = Classes::where('user_id', $userId)->first();
+            if (!$class) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Không tìm thấy lớp học'
+                ]);
+            }
+            $appId = $class->app_id;
+        }
+
         $listLesson = $this->bookService->getLessonByApp($appId, $userId, $classId);
 
         return response()->json([

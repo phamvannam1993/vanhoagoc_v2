@@ -1,6 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { onMounted, reactive, ref } from "vue";
 import { Link } from '@inertiajs/vue3';
@@ -243,7 +243,7 @@ const confirm = (value) => {
 <template>
     <Head :title="`Comment - ${app.name}`" />
 
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Comment - {{ app.name }}
@@ -385,7 +385,7 @@ const confirm = (value) => {
                 </div>
             </div>
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style lang="scss">
 .ant-select-selector,

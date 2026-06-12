@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { computed, nextTick, onMounted, ref } from "vue";
 import { Link } from '@inertiajs/vue3';
@@ -416,7 +416,7 @@ const duplicateQuestion = () => {
 <template>
     <Head title="Question Exercise" />
 
-    <MasterLayout :breadcrumbs=breadcrumbs>
+    <SchoolLayout :breadcrumbs=breadcrumbs>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Questions Exercise
@@ -685,7 +685,7 @@ const duplicateQuestion = () => {
                 </div>
             </div>
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style lang="scss">
 .ant-select-selector,

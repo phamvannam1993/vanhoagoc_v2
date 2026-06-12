@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { nextTick, onMounted, reactive, ref } from "vue";
 import { Link } from '@inertiajs/vue3';
@@ -278,7 +278,7 @@ const onFileSelected = async (event) => {
 <template>
   <Head title="Question" />
 
-  <MasterLayout>
+  <SchoolLayout>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">
         Questions
@@ -523,7 +523,7 @@ const onFileSelected = async (event) => {
         </div>
       </div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 <style lang="scss">
 .ant-select-selector,

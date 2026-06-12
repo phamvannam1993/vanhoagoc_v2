@@ -21,15 +21,7 @@ const user = page.props.auth.user;
         <!-- Primary Navigation Menu -->
         <div class="px-4 sm:px-6 lg:px-8">
           <div class="flex h-16 justify-between">
-            <div class="flex">
-              <Link :href="route('apps.dashboard')">
-                <img
-                  class="absolute left-auto top-[14px] cursor-pointer px-20 lg:top-1/4"
-                  src="/images/logo-new.png"
-                  alt="logo"
-                />
-              </Link>
-            </div>
+        
             <div class="hidden gap-4 sm:ms-6 sm:flex sm:items-center">
               <div class="flex gap-4"></div>
               <!-- Settings Dropdown -->

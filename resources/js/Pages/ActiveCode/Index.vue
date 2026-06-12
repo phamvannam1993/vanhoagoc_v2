@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ref, onMounted, nextTick } from 'vue';
 import {SearchOutlined} from '@ant-design/icons-vue';
 import { Link } from '@inertiajs/vue3';
@@ -161,7 +161,7 @@ const handleChangePageSize = () => {
 <template>
   <Head title="Active code" />
 
-  <MasterLayout>
+  <SchoolLayout>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">
         Active code
@@ -236,7 +236,7 @@ const handleChangePageSize = () => {
         </div>
       </div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 <style lang="scss">
 .ant-select-selector,

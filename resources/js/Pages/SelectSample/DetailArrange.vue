@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ErrorMessage, Field, Form } from 'vee-validate';
 import InputError from '@/Components/InputError.vue';
 import { computed, defineProps, reactive, ref } from "vue";
@@ -71,7 +71,7 @@ const showPreview = () => {
 <template>
     <Head title="Create Question Arrange" />
 
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Create Question Arrange
@@ -219,7 +219,7 @@ const showPreview = () => {
             v-model:open-preview="openPreview"
             v-model:data="form"
         ></component>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-height {

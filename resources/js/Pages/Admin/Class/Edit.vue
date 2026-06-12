@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from "@inertiajs/vue3";
-import MasterLayout from "@/Layouts/MasterLayout.vue";
+import SchoolLayout from "@/Layouts/SchoolLayout.vue"";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import * as yup from "yup";
 import InputError from "@/Components/InputError.vue";

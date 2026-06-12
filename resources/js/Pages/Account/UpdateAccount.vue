@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import { defineProps, ref } from "vue";
 import InputError from "@/Components/InputError.vue";
@@ -98,7 +98,7 @@ const removeImage = () => {
 
 <template>
     <Head title="Update account" />
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Update account
@@ -328,7 +328,7 @@ const removeImage = () => {
             </div>
 
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-input {

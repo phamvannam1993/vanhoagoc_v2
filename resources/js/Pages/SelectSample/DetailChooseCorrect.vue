@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { Field, Form } from 'vee-validate';
 import { reactive, ref, defineProps, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
@@ -130,7 +130,7 @@ const showPreview = () => {
 <template>
     <Head title="Detail Choose Correct" />
 
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Detail Choose Question
@@ -316,7 +316,7 @@ const showPreview = () => {
             v-model:data="form"
         >
         </component>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-height {

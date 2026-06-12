@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { Form } from 'vee-validate';
 import { AudioOutlined } from '@ant-design/icons-vue';
 import { ref } from 'vue';
@@ -151,7 +151,7 @@ const goBack = () => {
 
 <template>
     <Head title="New Video" />
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 App
@@ -400,7 +400,7 @@ const goBack = () => {
                 </div>
             </div>
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-input {

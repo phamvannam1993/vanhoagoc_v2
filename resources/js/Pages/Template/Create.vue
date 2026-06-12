@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import { defineProps, ref } from "vue";
 import InputError from "@/Components/InputError.vue";
@@ -370,7 +370,7 @@ const selectType = (value) => {
 
 <template>
     <Head title="Create Template" />
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 App
@@ -911,7 +911,7 @@ const selectType = (value) => {
                 <p class="mt-4 text-lg font-medium">Đang tải lên...</p>
             </div>
         </a-modal>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-input {

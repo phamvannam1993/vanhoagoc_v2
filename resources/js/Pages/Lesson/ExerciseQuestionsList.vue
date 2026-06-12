@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 
 const props = defineProps({
   query: Object,
@@ -17,7 +17,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <MasterLayout>
+  <SchoolLayout>
     <Head title="Danh sách câu hỏi" />
     <div>
       <!-- Breadcrumb -->
@@ -72,7 +72,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 
 <style scoped>

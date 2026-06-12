@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import InputError from '@/Components/InputError.vue';
@@ -167,7 +167,7 @@ const goBack = () => {
 
 <template>
   <Head title="Edit Video" />
-  <MasterLayout>
+  <SchoolLayout>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">App</h2>
     </template>
@@ -276,7 +276,7 @@ const goBack = () => {
         <p class="mt-4 text-lg font-medium">Đang tải lên...</p>
       </div>
     </a-modal>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-input {

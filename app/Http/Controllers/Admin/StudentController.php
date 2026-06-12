@@ -129,31 +129,49 @@ class StudentController extends Controller
         }
 
         $list = $this->userService->getListStudent($params);
+        $userIds = $list->pluck('id')->toArray();
+        $classId = $params['class_id'] ?? null;
+
+        // Bulk load all data to avoid N+1 queries
+        $userClasses = UserClass::whereIn('user_id', $userIds)
+            ->with('classes.app')
+            ->get()
+            ->keyBy('user_id');
+
+        $points = Point::whereIn('user_id', $userIds)
+            ->select('user_id')
+            ->distinct()
+            ->get()
+            ->keyBy('user_id');
+
+        $practiceClassExists = [];
+        if ($classId) {
+            $practiceClassExists = PracticeClass::where('class_id', $classId)
+                ->whereIn('student_id', $userIds)
+                ->select('student_id')
+                ->distinct()
+                ->get()
+                ->pluck('student_id')
+                ->flip()
+                ->toArray();
+        }
+
         foreach($list as $item) {
             $item->app_name = "";
             $item->class_name = "";
-            $userClass = UserClass::where('user_id', $item['id'])->first();
-            if($userClass) {
-                $app = App::where('id', $userClass->app_id)->first();
-                if($app) {
-                    $item->app_name  = $app->name;
-                }
-                $classes = Classes::where('id', $userClass->class_id)->first();
-                if($classes) {
-                    $item->class_name  = $classes->name;
+
+            if (isset($userClasses[$item->id])) {
+                $userClass = $userClasses[$item->id];
+                if ($userClass->classes) {
+                    $item->class_name = $userClass->classes->name;
+                    if ($userClass->classes->app) {
+                        $item->app_name = $userClass->classes->app->name;
+                    }
                 }
             }
-            $item->is_result = false;
-            $point = Point::where('user_id', $item->id)->first();
-            if($point) {
-                $item->is_result = true;
-            }
-            $classId = $params['class_id'] ?? null;
-            $item->is_assign = $classId
-                ? PracticeClass::where('class_id', $classId)
-                    ->where('student_id', $item->id)
-                    ->exists()
-                : false;
+
+            $item->is_result = isset($points[$item->id]);
+            $item->is_assign = isset($practiceClassExists[$item->id]);
         }
         return response()->json([
             'status' => true,

@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { Field } from 'vee-validate';
 import InputError from '@/Components/InputError.vue';
 import { ref } from 'vue';
@@ -98,7 +98,7 @@ const goBack = () => {
 <template>
   <Head title="Create Exercise" />
 
-  <MasterLayout :breadcrumbs=breadcrumbs>
+  <SchoolLayout :breadcrumbs=breadcrumbs>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">
         Create Exercise
@@ -203,7 +203,7 @@ const goBack = () => {
         </a-button>
       </template>
     </a-modal>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 <style scoped>
 .active {

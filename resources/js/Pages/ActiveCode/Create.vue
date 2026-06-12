@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import { defineProps, ref } from "vue";
 import InputError from "@/Components/InputError.vue";
@@ -47,7 +47,7 @@ const goBack = () => {
 
 <template>
     <Head title="New member" />
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 New member
@@ -135,7 +135,7 @@ const goBack = () => {
             </div>
 
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-input {

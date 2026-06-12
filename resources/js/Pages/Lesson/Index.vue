@@ -1,6 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { nextTick, onMounted, ref } from "vue";
 import { Link, usePage } from '@inertiajs/vue3';
@@ -377,7 +377,7 @@ const copyLesson = async (to_week_id) => {
 <template>
   <Head title="Lessons" />
 
-  <MasterLayout :breadcrumbs=breadcrumbs>
+  <SchoolLayout :breadcrumbs=breadcrumbs>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">Lessons</h2>
     </template>
@@ -517,22 +517,6 @@ const copyLesson = async (to_week_id) => {
                       alt=""
                       :class="`h-[38px] cursor-pointer ${record.status === 'off' ? 'hide-class' : ''}`"
                     />
-                  </Link>
-
-                  <!-- Generate Content Button -->
-                  <Link
-                    :href="
-                      route('lessons.generateQuiz', {
-                        practice_id: record.id,
-                        app_id: app_id,
-                        book_id: book_id,
-                        week_id: weekId,
-                      })
-                    "
-                  >
-                    <a-button type="primary" size="small" class="whitespace-nowrap">
-                      Tạo
-                    </a-button>
                   </Link>
                 </div>
               </template>
@@ -809,7 +793,7 @@ const copyLesson = async (to_week_id) => {
         </div>
       </div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 <style lang="scss">
 .ant-select-selector,

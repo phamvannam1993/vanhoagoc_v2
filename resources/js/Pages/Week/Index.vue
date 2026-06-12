@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { ref, onMounted, nextTick } from "vue";
 import { Link } from '@inertiajs/vue3';
@@ -288,7 +288,7 @@ const deleteMany = async () => {
 <template>
   <Head title="Weeks" />
 
-  <MasterLayout :breadcrumbs=breadcrumbs>
+  <SchoolLayout :breadcrumbs=breadcrumbs>
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">Weeks</h2>
     </template>
@@ -495,7 +495,7 @@ const deleteMany = async () => {
         </div>
       </div>
     </div>
-  </MasterLayout>
+  </SchoolLayout>
 </template>
 <style lang="scss">
 .ant-select-selector,

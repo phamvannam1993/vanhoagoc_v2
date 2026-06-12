@@ -4,7 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { SearchOutlined } from '@ant-design/icons-vue';
 import { ref, onMounted } from 'vue';
 import { useToast } from 'vue-toastification';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 
 const toast = useToast();
 const page = usePage();
@@ -69,7 +69,7 @@ async function deleteItem(id) {
 
 <template>
     <Head title="Quản lý NDGD" />
-    <MasterLayout>
+    <SchoolLayout>
         <div class="app-page py-4">
             <div class="content-page mx-auto w-full md:w-10/12">
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">Quản lý Nội dung Giáo dục (NDGD)</h1>
@@ -121,5 +121,5 @@ async function deleteItem(id) {
                 </div>
             </div>
         </div>
-    </MasterLayout>
+    </SchoolLayout>
 </template>

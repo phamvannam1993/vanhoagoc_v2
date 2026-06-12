@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm as useInertiaForm, usePage } from '@inertiajs/vue3';
-import MasterLayout from '@/Layouts/MasterLayout.vue';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 import { ErrorMessage, Field, Form } from 'vee-validate';
 import InputError from '@/Components/InputError.vue';
 import { computed, defineProps, ref } from 'vue';
@@ -75,7 +75,7 @@ const fileNameVideo = ref(props.sample?.fileNameVideo || '');
 <template>
     <Head title="Detail Question Drag Drop" />
 
-    <MasterLayout>
+    <SchoolLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Detail Question Drag Drop
@@ -282,7 +282,7 @@ const fileNameVideo = ref(props.sample?.fileNameVideo || '');
             v-model:preview-image="previewImage"
         >
         </component>
-    </MasterLayout>
+    </SchoolLayout>
 </template>
 <style scoped lang="scss">
 .custom-height {
