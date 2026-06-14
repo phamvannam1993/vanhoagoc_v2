@@ -35,30 +35,29 @@ if(tab_id == 1) {
             title: 'STT',
             dataIndex: 'id',
             key: 'id',
-            width: '5%',
+            width: '8%',
         },
         {
             title: 'Họ và tên',
             dataIndex: 'name',
             key: 'name',
-            width: '15%',
+            width: '25%',
         },
         {
-            title: 'Thành tích(Sao)',
+            title: 'Thành tích (Sao)',
             key: 'star_count',
             dataIndex: 'star_count',
-            width: '30%',
+            width: '25%',
         },
         {
             title: 'Thời gian làm',
             key: 'time_text',
             dataIndex: 'time_text',
-            width: '30%',
+            width: '22%',
         },
         {
             title: '',
-            key: 'detail',
-            dataIndex: 'detail',
+            key: 'expand',
             width: '20%',
         },
     ];
@@ -85,6 +84,7 @@ const pagination = ref({
     total: 0,
 });
 const data = ref([]);
+const expandedRowKeys = ref([]);
 const formFilter = ref({
     search: '',
     user_id:user_id,
@@ -147,7 +147,8 @@ const loadData = async () => {
                     star_count: Number(totalStar),
                     practice_id: v.best_points_per_practice.length > 0 ? v.best_points_per_practice[0].practice_id : '',
                     type:formFilter.value.type,
-                    time_text: totalTimeInSeconds > 0 ? formatTimeToMinutesSeconds(totalTimeInSeconds) : ''
+                    time_text: totalTimeInSeconds > 0 ? formatTimeToMinutesSeconds(totalTimeInSeconds) : '',
+                    best_points_per_practice: v.best_points_per_practice || []
                 };
             });
             pagination.value.pageSize = res.data.data.per_page;
@@ -271,6 +272,7 @@ const breadcrumbs = [
                         ref="tableRef"
                         rowKey="id"
                         :scroll="{ x: 'max-content' }"
+                        :expandable="tab_id == 1 ? { expandedRowKeys, onExpand: (expanded, record) => { if(expanded) expandedRowKeys.push(record.id); else expandedRowKeys.splice(expandedRowKeys.indexOf(record.id), 1); } } : null"
                     >
                         <template #bodyCell="{ column, record, index }">
                             <template v-if="column.key === 'id'">
@@ -296,7 +298,25 @@ const breadcrumbs = [
                             </template>
 
                             <template v-if="column.key === 'detail' && record.type != 2">
-                                <a  :href="route('admins.students.result', { user_id: record.id, class_id: class_id, tab_id:1, result_learn:1})"><span class=" ant-btn ant-btn-primary mt-6">Chi tiết luyện tập</span></a>
+                                <a-button
+                                    type="primary"
+                                    @click="expandedRowKeys.includes(record.id) ? expandedRowKeys.splice(expandedRowKeys.indexOf(record.id), 1) : expandedRowKeys.push(record.id)"
+                                    v-if="tab_id == 1"
+                                >
+                                    {{ expandedRowKeys.includes(record.id) ? 'Ẩn chi tiết' : 'Xem chi tiết' }}
+                                </a-button>
+                                <a v-else :href="route('admins.students.result', { user_id: record.id, class_id: class_id, tab_id:1, result_learn:1})">
+                                    <span class="ant-btn ant-btn-primary mt-6">Chi tiết luyện tập</span>
+                                </a>
+                            </template>
+
+                            <template v-if="column.key === 'expand'">
+                                <a-button
+                                    type="primary"
+                                    @click="expandedRowKeys.includes(record.id) ? expandedRowKeys.splice(expandedRowKeys.indexOf(record.id), 1) : expandedRowKeys.push(record.id)"
+                                >
+                                    {{ expandedRowKeys.includes(record.id) ? '▲ Ẩn' : '▼ Xem chi tiết' }}
+                                </a-button>
                             </template>
 
                             <template v-if="column.key === 'review'">
@@ -304,6 +324,30 @@ const breadcrumbs = [
                                 <span v-else-if="record.review_status === 1" class="ant-btn ant-btn-primary mt-6">Đạt</span>
                                 <span v-else class=" ant-btn ant-btn-red mt-6 gray-btn color-white">Không đạt</span>
                             </template>
+                        </template>
+
+                        <template #expandedRowRender="{ record }" v-if="tab_id == 1">
+                            <div class="practice-details p-4 bg-gray-50">
+                                <h4 class="font-bold mb-3">Chi tiết luyện tập của {{ record.name }}</h4>
+                                <a-table
+                                    :columns="[
+                                        { title: 'STT', key: 'stt', width: 60, align: 'center' },
+                                        { title: 'Tên bài luyện tập', dataIndex: 'name', key: 'name' },
+                                        { title: 'Thành tích (Sao)', dataIndex: 'star_count', key: 'star_count', width: 150, align: 'center' },
+                                        { title: 'Thời gian', dataIndex: 'time_text', key: 'time_text', width: 120, align: 'center' }
+                                    ]"
+                                    :data-source="record.best_points_per_practice.map((item, idx) => ({
+                                        ...item,
+                                        stt: idx + 1,
+                                        star_count: item.star_count || 0,
+                                        time_text: item.type === 1 && item.time ? formatTimeToMinutesSeconds(item.time) : '-',
+                                        name: item.practice_name || 'Không xác định'
+                                    }))"
+                                    :pagination="false"
+                                    size="small"
+                                    rowKey="id"
+                                />
+                            </div>
                         </template>
                         <template #footer>
                             <div class="flex items-center justify-end">

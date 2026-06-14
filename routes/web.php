@@ -429,6 +429,7 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
                 Route::prefix('json')->name('json.')->group(function () {
                     Route::get('/list', [StudentController::class, 'jsonList'])->name('jsonList');
                     Route::get('/get-class-by-app', [StudentController::class, 'getClassByApp'])->name('getClassByApp');
+                    Route::get('/result-summary-by-app', [StudentController::class, 'resultSummaryByApp'])->name('resultSummaryByApp');
                     Route::post('/assign-class', [StudentController::class, 'assignClass'])->name('assignClass');
                     Route::post('/store', [StudentController::class, 'store'])->name('store');
                     Route::post('/import-student', [StudentController::class, 'importStudent'])->name('importStudent');

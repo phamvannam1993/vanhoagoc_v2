@@ -26,12 +26,20 @@ class SchoolController extends Controller
 
     public function jsonList(Request $request)
     {
-        $params = $request->all();
-        $list = $this->appService->getList($params);
+        try {
+            $params = $request->all();
+            $list = $this->appService->getList($params);
 
-        return response()->json([
-            'status' => true,
-            'data' => $list
-        ]);
+            return response()->json([
+                'status' => true,
+                'data' => $list
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('SchoolController.jsonList error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

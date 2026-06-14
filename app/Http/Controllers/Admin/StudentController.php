@@ -198,6 +198,119 @@ class StudentController extends Controller
         ]);
     }
 
+    public function resultSummaryByApp(Request $request)
+    {
+        try {
+            $appId = $request->input('app_id');
+            $classId = $request->input('class_id');
+            $page = $request->input('page', 1);
+            $perPage = $request->input('per_page', 20);
+            $search = $request->input('search', '');
+            $user = auth()->user();
+
+            // Build query like jsonList (without pagination)
+            $query = User::query();
+            $query = $query->with(['classes.app', 'studentApp', 'orders']);
+            $query = $query->whereHas('userType', function ($q) {
+                $q->where('type', UserType::TYPE_STUDENT_APP);
+            });
+
+            // Filter by director app
+            if ($user->userType->type === UserType::TYPE_DIRECTOR) {
+                $query = $query->whereHas('studentApp', function ($q) use($user) {
+                    $q->where('app_id', $user->directorApp->id);
+                });
+            }
+
+            // Filter by search
+            if (!empty($search)) {
+                $query->where(function($q) use($search) {
+                    $q->where('name', 'like', '%'. $search . '%')
+                        ->orWhere('email', 'like', '%'. $search . '%')
+                        ->orWhere('username', 'like', '%'. $search . '%')
+                        ->orWhere('tel', 'like', '%'. $search . '%');
+                });
+            }
+
+            // Filter by app
+            if ($appId) {
+                $query = $query->whereHas('classes', function ($q) use ($appId) {
+                    $q->where('classes.app_id', $appId);
+                });
+            }
+
+            // Filter by class
+            if ($classId) {
+                $query = $query->whereHas('classes', function ($q) use ($classId) {
+                    $q->where('classes.id', $classId);
+                });
+            }
+
+            // Filter by teacher classes
+            if ($user->userType->type === UserType::TYPE_TEACHER) {
+                $query = $query->whereHas('classes', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
+
+            // Paginate
+            $list = $query->paginate($perPage, ['*'], 'page', $page);
+
+            // Get user IDs for bulk loading
+            $userIds = $list->pluck('id')->toArray();
+
+            // Bulk load relationships for adding extra fields
+            $userClasses = UserClass::whereIn('user_id', $userIds)
+                ->with('classes.app')
+                ->get()
+                ->keyBy('user_id');
+
+            // Get result summary from points
+            $pointStats = Point::whereIn('user_id', $userIds)
+                ->select('user_id', DB::raw('COUNT(*) as total_points'), DB::raw('AVG(star_count) as avg_score'))
+                ->groupBy('user_id')
+                ->get()
+                ->keyBy('user_id');
+
+            // Add extra fields like jsonList does
+            foreach ($list as $item) {
+                $item->app_name = '';
+                $item->class_name = '';
+                $item->total_points = 0;
+                $item->total_score = 0;
+                $item->is_result = false;
+
+                if (isset($userClasses[$item->id])) {
+                    $uc = $userClasses[$item->id];
+                    if ($uc->classes) {
+                        $item->class_name = $uc->classes->name;
+                        if ($uc->classes->app) {
+                            $item->app_name = $uc->classes->app->name;
+                        }
+                    }
+                    $item->class_id = $uc->class_id;
+                }
+
+                if (isset($pointStats[$item->id])) {
+                    $item->total_points = $pointStats[$item->id]->total_points ?? 0;
+                    $item->total_score = round($pointStats[$item->id]->avg_score ?? 0, 1);
+                    $item->is_result = true;
+                }
+            }
+
+            return response()->json([
+                'status' => true,
+                'data' => $list
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('StudentController.resultSummaryByApp error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         try {

@@ -22,6 +22,12 @@ class CheckSchoolRole
     {
         $user = auth()->user();
 
+        // Allow json.list endpoint for all authenticated users
+        if (str_contains($request->path(), 'school/json/list')) {
+            return $next($request);
+        }
+
+        // For other routes, only allow ADMIN and DIRECTOR
         if ($user->userType->type !== UserType::TYPE_ADMIN && $user->userType->type !== UserType::TYPE_DIRECTOR) {
             return redirect()->route('403');
         }

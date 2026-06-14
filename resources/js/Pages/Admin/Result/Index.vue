@@ -59,24 +59,7 @@ const pagination = ref({
     pageSize: 1,
     total: 0,
 });
-const data = ref([
-    {
-        id: 1,
-        name: 'Bài 1',
-        user: 'Nguyễn Văn A',
-        practical_result: 40,
-        time_complete: '06:11',
-        theoretical_result: 50
-    },
-    {
-        id: 2,
-        name: 'Bài 2',
-        user: 'Nguyễn Văn B',
-        practical_result: 60,
-        time_complete: '46:11',
-        theoretical_result: 60
-    }
-]);
+const data = ref([]);
 const formFilter = ref({
     search: '',
     app_id: app_id
@@ -93,8 +76,21 @@ const loadData = async () => {
     };
     const res = await axios.get(route('admins.points.json.getResult', params));
 
-    if (res.data.success) {
-        console.log(111, res.data.data)
+    if (res.data.status || res.data.success) {
+        data.value = res.data.data.data.map((v) => {
+            return {
+                id: v.id,
+                name: v.name,
+                user: v.user,
+                practical_result: v.practical_result,
+                time_complete: v.time_complete,
+                theoretical_result: v.theoretical_result
+            };
+        });
+
+        pagination.value.pageSize = res.data.data.per_page;
+        pagination.value.total = res.data.data.total;
+        pagination.value.current = res.data.data.current_page;
     }
 };
 const setupSortable = () => {
