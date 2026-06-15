@@ -519,7 +519,7 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
 
 Route::prefix('hr')->name('hr.')->group(function () {
     Route::get('/login', [AuthHrController::class, 'showFormLogin'])->middleware(['CheckGuest'])->name('showFormLogin');
-    Route::post('/login', [AuthHrController::class, 'login'])->name('login');
+    Route::post('/form-login', [AuthHrController::class, 'login'])->name('login');
 
     Route::middleware(['auth:hr'])->group(function () {
         Route::prefix('point')->name('point.')->group(function () {

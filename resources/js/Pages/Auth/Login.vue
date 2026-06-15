@@ -5,7 +5,8 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
 
 defineProps({
     canResetPassword: {
@@ -16,16 +17,31 @@ defineProps({
     },
 });
 
+const page = usePage();
 const form = useForm({
     email: '',
     password: '',
+    role_type: '',
     remember: false,
+});
+
+onMounted(() => {
+    // Read role from localStorage (set by Welcome page)
+    const selectedRole = localStorage.getItem('selectedRole');
+    console.log('Login mounted, selectedRole from localStorage:', selectedRole);
+    if (selectedRole) {
+        form.role_type = selectedRole;
+        console.log('Form role_type set to:', form.role_type);
+    }
 });
 
 const submit = () => {
     form.post(route('login'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('password'),
+        onSuccess: () => {
+            localStorage.removeItem('selectedRole');
+            form.reset('password');
+        },
     });
 };
 </script>

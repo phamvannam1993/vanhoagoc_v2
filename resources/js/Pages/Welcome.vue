@@ -12,6 +12,7 @@ defineProps({
 const form = useForm({
     email: '',
     password: '',
+    role_type: '',
     checked: false,
 });
 
@@ -33,11 +34,33 @@ const roles = [
     { id: 'sadmin',  name: 'Quản trị trường',   sub: 'Giáo viên, lớp, học sinh & mã kích hoạt',    icon: 'building', color: '#0d9488' },
     { id: 'teacher', name: 'Giáo viên',         sub: 'Giao bài, theo dõi kết quả lớp phụ trách',   icon: 'graduate', color: '#ea580c' },
 ];
-const selectRole = (r) => { role.value = r; nextTick(() => emailRef.value?.focus()); };
+const selectRole = (r) => {
+    const roleMap = { 'admin': 'admin', 'editor': 'editor', 'sadmin': 'director', 'teacher': 'teacher' };
+    const roleType = roleMap[r.id] || r.id;
+    console.log('selectRole called with role:', r.id, '-> roleType:', roleType);
+    // Set role trong form
+    form.role_type = roleType;
+    console.log('form.role_type after set:', form.role_type);
+    role.value = r;
+    nextTick(() => emailRef.value?.focus());
+};
 
 const errorList = computed(() => Object.values(form.errors).filter(Boolean));
 
 const handleSubmit = () => {
+    console.log('handleSubmit - form data before submit:', {
+        role_type: form.role_type,
+        email: form.email,
+        password: form.password
+    });
+    console.log('route(login) resolves to:', route('login'));
+
+    if (!form.role_type) {
+        console.error('role_type không được set!');
+        alert('Vui lòng chọn vai trò trước khi đăng nhập');
+        return;
+    }
+
     form.post(route('login'));
 };
 

@@ -26,7 +26,8 @@ class AuthController extends Controller
     {
         $data = $request->all([
             'email',
-            'password'
+            'password',
+            'role_type'
         ]);
         $data['email'] = isset($data['email']) ? strtolower($data['email']) : '';
         $result = $authService->login($data);
@@ -35,14 +36,26 @@ class AuthController extends Controller
             return back()->withErrors($result['message']);
         }
 
+        $user = auth()->user();
+
+        // Check quyền truy cập dựa vào user type
+        $userType = $result['userType']->type ?? null;
+
+        // Admin/Editor/Director/Teacher → allow /admins access
+        $allowAdmins = in_array($userType, [
+            UserType::TYPE_ADMIN,
+            UserType::TYPE_EDITOR,
+            UserType::TYPE_DIRECTOR,
+            UserType::TYPE_TEACHER
+        ]) || $result['isAdmin'];
+
         // Trang mặc định theo vai trò
         $default = route('apps.dashboard');
-        if (!$result['isAdmin'] && $result['userType']
-            && $result['userType']->type !== UserType::TYPE_ADMIN
-            && $result['userType']->type !== UserType::TYPE_EDITOR) {
-            $default = $result['userType']->type === UserType::TYPE_DIRECTOR
-                ? route('admins.school.index')
-                : route('admins.class.index');
+
+        if ($allowAdmins && $userType === UserType::TYPE_DIRECTOR) {
+            $default = route('admins.school.index');
+        } elseif ($allowAdmins && $userType === UserType::TYPE_TEACHER) {
+            $default = route('admins.class.index');
         }
 
         // Nếu trước đó người dùng bấm vào 1 chức năng cần quyền (đã lưu url.intended

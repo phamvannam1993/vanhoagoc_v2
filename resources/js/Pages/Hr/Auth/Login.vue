@@ -17,7 +17,7 @@ const rules = {
 
 const handleSubmit = () => {
   form.post(route('hr.login'), {
-    onFinish: () => clearErrors(),
+    onFinish: () => form.errors = {},
   });
 };
 
