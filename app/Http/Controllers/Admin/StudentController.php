@@ -249,7 +249,7 @@ class StudentController extends Controller
             // Filter by teacher classes
             if ($user->userType->type === UserType::TYPE_TEACHER) {
                 $query = $query->whereHas('classes', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
+                    $q->where('classes.user_id', $user->id);
                 });
             }
 
