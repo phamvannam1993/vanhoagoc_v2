@@ -18,7 +18,7 @@ const user = page.props.auth.user;
 <template>
     <div class="min-h-screen flex flex-col">
         <!-- Top Navbar -->
-        <nav class="bg-[#041C38] border-b border-gray-200 sticky top-0 z-40 w-full">
+        <nav class="bg-[#041C38] border-b border-gray-200 sticky top-0 z-50 w-full">
             <div class="flex h-16 justify-between items-center px-4 sm:px-6 lg:px-8">
                     <!-- Left: Tool Editor -->
                     <Link :href="route('apps.dashboard')" class="flex items-center gap-3 shrink-0">
