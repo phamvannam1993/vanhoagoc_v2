@@ -7,10 +7,11 @@
         <!-- Nav groups -->
         <nav class="flex-1 overflow-y-auto py-3">
             <template v-for="(group, gi) in groups" :key="gi">
-                <div v-if="group.permission" class="px-3 mb-1">
+                <div class="px-3 mb-1">
                     <div class="px-2 mt-3 mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">{{ group.label }}</div>
                     <template v-for="(item, ii) in group.items" :key="ii">
-                        <Link v-if="item.permission"
+                        <!-- Có quyền: điều hướng bình thường -->
+                        <Link v-if="item.allowed"
                             :href="item.link"
                             :class="[
                                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14.5px] font-semibold transition',
@@ -21,6 +22,15 @@
                             <span class="flex-1 min-w-0 truncate">{{ item.name }}</span>
                             <span v-if="item.badge" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#2b7de9] text-white">{{ item.badge }}</span>
                         </Link>
+                        <!-- Không có quyền: hiển thị mờ + ổ khoá, bấm vào yêu cầu đăng nhập -->
+                        <button v-else type="button" @click="requestAccess(item)"
+                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14.5px] font-semibold transition w-full text-left text-gray-400 opacity-70 hover:bg-gray-100 hover:opacity-100">
+                            <svg class="w-[19px] h-[19px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="icons[item.icon]"></svg>
+                            <span class="flex-1 min-w-0 truncate">{{ item.name }}</span>
+                            <svg class="w-4 h-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="icons.lock"></svg>
+                        </button>
                     </template>
                 </div>
             </template>
@@ -66,10 +76,10 @@
             <div v-if="isOpen" class="bg-white shadow-lg border-t w-full max-h-[80vh] overflow-y-auto">
                 <div class="px-3 py-3">
                     <template v-for="(group, gi) in groups" :key="gi">
-                        <div v-if="group.permission" class="mb-1">
+                        <div class="mb-1">
                             <div class="px-2 mt-3 mb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">{{ group.label }}</div>
                             <template v-for="(item, ii) in group.items" :key="ii">
-                                <Link v-if="item.permission" :href="item.link"
+                                <Link v-if="item.allowed" :href="item.link"
                                     :class="[
                                         'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold',
                                         item.active ? 'bg-[#e8f0fe] text-[#2b7de9]' : 'text-gray-700 hover:bg-gray-100'
@@ -79,6 +89,14 @@
                                     <span class="flex-1">{{ item.name }}</span>
                                     <span v-if="item.badge" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#2b7de9] text-white">{{ item.badge }}</span>
                                 </Link>
+                                <button v-else type="button" @click="requestAccess(item)"
+                                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold w-full text-left text-gray-400 opacity-70 hover:bg-gray-100">
+                                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="icons[item.icon]"></svg>
+                                    <span class="flex-1">{{ item.name }}</span>
+                                    <svg class="w-4 h-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="icons.lock"></svg>
+                                </button>
                             </template>
                         </div>
                     </template>
@@ -94,11 +112,28 @@
             </div>
         </transition>
     </nav>
+
+    <!-- ===================== HỘP THOẠI YÊU CẦU QUYỀN ===================== -->
+    <a-modal v-model:open="lockOpen" title="Cần quyền truy cập" :centered="true" :footer="null" :width="440">
+        <div class="py-2">
+            <p class="text-[15px] text-gray-700">
+                Chức năng <b>{{ lockItem?.name }}</b> chỉ dành cho vai trò:
+                <b class="text-[#2b7de9]">{{ lockRoleNames() }}</b>.
+            </p>
+            <p class="text-[14px] text-gray-500 mt-2">
+                Tài khoản hiện tại không có quyền. Bạn có muốn đăng nhập bằng tài khoản có quyền không?
+            </p>
+        </div>
+        <div class="flex justify-end gap-3 mt-4">
+            <a-button @click="lockOpen = false">Huỷ</a-button>
+            <a-button type="primary" @click="confirmLogin">Đăng nhập</a-button>
+        </div>
+    </a-modal>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER, USER_EDITOR } from "@/const.js";
 
 const page = usePage();
@@ -108,7 +143,14 @@ const userType = user.user_type.type;
 // current route name; layouts are mounted per page so this is correct on each navigation
 const cur = route().current() || '';
 const isActive = (matches) => matches.some(m => cur.includes(m));
-const has = (...roles) => roles.includes(userType);
+
+// tên vai trò hiển thị cho người dùng (dùng trong hộp thoại yêu cầu quyền)
+const roleLabels = {
+    [USER_TYPE_ADMIN]: 'Quản trị viên',
+    [USER_TYPE_DIRECTOR]: 'Giám đốc/Hiệu trưởng',
+    [USER_TYPE_TEACHER]: 'Giáo viên',
+    [USER_EDITOR]: 'Biên tập viên',
+};
 
 // inline icon paths (24x24, stroke=currentColor)
 const icons = {
@@ -127,48 +169,70 @@ const icons = {
     book:     '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
     user:     '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    lock:     '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
 };
 
-// Grouped navigation. Only functions that open standalone are surfaced directly;
-// the App entry is the gateway to the drill-down (App → Sách → Tuần → Bài học).
+// Grouped navigation: LUÔN hiển thị đầy đủ cho mọi vai trò. Mỗi item khai báo
+// `roles` (mảng vai trò được phép, hoặc true = mọi vai trò). Item ngoài quyền sẽ
+// bị khoá: bấm vào sẽ yêu cầu đăng nhập bằng tài khoản có quyền.
 const rawGroups = [
     { label: 'Nội dung', items: [
-        { name: 'App',          icon: 'app',     link: route('apps.dashboard'),  match: ['apps','books','weeks','lessons','questions','questionEditors','templates','assignedExercises'], permission: has(USER_TYPE_ADMIN, USER_EDITOR, USER_TYPE_TEACHER, USER_TYPE_DIRECTOR) },
-        { name: 'Bình luận',    icon: 'message', link: route('comments.index'),  match: ['comments'], permission: has(USER_TYPE_ADMIN, USER_EDITOR) },
+        { name: 'App',          icon: 'app',     link: route('apps.dashboard'),  match: ['apps','books','weeks','lessons','questions','questionEditors','templates','assignedExercises'], roles: [USER_TYPE_ADMIN, USER_EDITOR, USER_TYPE_TEACHER, USER_TYPE_DIRECTOR] },
+        { name: 'Bình luận',    icon: 'message', link: route('comments.index'),  match: ['comments'], roles: [USER_TYPE_ADMIN, USER_EDITOR] },
     ]},
     { label: 'Trường học', items: [
-        { name: 'Đơn vị(App)',          icon: 'building', link: route('admins.school.index'),     match: ['admins.school'],       permission: has(USER_TYPE_ADMIN, USER_TYPE_DIRECTOR) },
-        { name: 'Giám đốc/ Hiệu trưởng', icon: 'userTie', link: route('admins.directors.index'),  match: ['admins.directors'],    permission: has(USER_TYPE_ADMIN) },
-        { name: 'Quản lý/ Giáo viên',    icon: 'users',   link: route('admins.teachers.index'),   match: ['admins.teachers'],     permission: has(USER_TYPE_ADMIN, USER_TYPE_DIRECTOR) },
-        { name: 'Phòng ban/Lớp',         icon: 'grid',    link: route('admins.class.index'),      match: ['admins.class'],        permission: has(USER_TYPE_TEACHER) },
-        { name: 'Nhân viên/ Học sinh',   icon: 'id',      link: route('admins.students.index'),   match: ['admins.students'],     permission: has(USER_TYPE_ADMIN, USER_TYPE_DIRECTOR) },
-        { name: 'Mã kích hoạt',          icon: 'shield',  link: route('admins.active-codes.index'), match: ['admins.active-codes'], permission: has(USER_TYPE_ADMIN) },
+        { name: 'Đơn vị(App)',          icon: 'building', link: route('admins.school.index'),     match: ['admins.school'],       roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR] },
+        { name: 'Giám đốc/ Hiệu trưởng', icon: 'userTie', link: route('admins.directors.index'),  match: ['admins.directors'],    roles: [USER_TYPE_ADMIN] },
+        { name: 'Quản lý/ Giáo viên',    icon: 'users',   link: route('admins.teachers.index'),   match: ['admins.teachers'],     roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR] },
+        { name: 'Phòng ban/Lớp',         icon: 'grid',    link: route('admins.class.index'),      match: ['admins.class'],        roles: [USER_TYPE_TEACHER] },
+        { name: 'Nhân viên/ Học sinh',   icon: 'id',      link: route('admins.students.index'),   match: ['admins.students'],     roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR] },
+        { name: 'Mã kích hoạt',          icon: 'shield',  link: route('admins.active-codes.index'), match: ['admins.active-codes'], roles: [USER_TYPE_ADMIN] },
     ]},
     { label: 'Giảng dạy', items: [
-        { name: 'Giao bài',  icon: 'send',   link: route('admins.teaching.assign'), match: ['admins.teaching.assign','admins.practices','admins.class.assignment'], permission: has(USER_TYPE_TEACHER) },
-        { name: 'Kết quả',   icon: 'chart',  link: route('admins.teaching.result'), match: ['admins.teaching.result','admins.points','admins.class.result','admins.class.rank'], permission: has(USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER) },
-        { name: 'Sự kiện',   icon: 'trophy', link: route('admins.event.index'),     match: ['admins.event'], permission: has(USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER) },
+        { name: 'Giao bài',  icon: 'send',   link: route('admins.teaching.assign'), match: ['admins.teaching.assign','admins.practices','admins.class.assignment'], roles: [USER_TYPE_TEACHER] },
+        { name: 'Kết quả',   icon: 'chart',  link: route('admins.teaching.result'), match: ['admins.teaching.result','admins.points','admins.class.result','admins.class.rank'], roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER] },
+        { name: 'Sự kiện',   icon: 'trophy', link: route('admins.event.index'),     match: ['admins.event'], roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER] },
     ]},
     { label: 'Khung năng lực', items: [
-        { name: 'Phẩm chất Năng lực (PCNL)', icon: 'award', link: route('admins.competencies.index'),        match: ['admins.competencies'],        permission: has(USER_TYPE_ADMIN) },
-        { name: 'Nội dung Giáo dục (NDGD)',  icon: 'book',  link: route('admins.educational-contents.index'), match: ['admins.educational-contents'], permission: has(USER_TYPE_ADMIN) },
+        { name: 'Phẩm chất Năng lực (PCNL)', icon: 'award', link: route('admins.competencies.index'),        match: ['admins.competencies'],        roles: [USER_TYPE_ADMIN] },
+        { name: 'Nội dung Giáo dục (NDGD)',  icon: 'book',  link: route('admins.educational-contents.index'), match: ['admins.educational-contents'], roles: [USER_TYPE_ADMIN] },
     ]},
     { label: 'Hệ thống', items: [
-        { name: 'Cài đặt tài khoản', icon: 'settings', link: route('users.index'),   match: ['users.index'], permission: has(USER_TYPE_ADMIN) },
-        { name: 'Hồ sơ',             icon: 'user',     link: route('profile.edit'),  match: ['profile'],     permission: true },
+        { name: 'Cài đặt tài khoản', icon: 'settings', link: route('users.index'),   match: ['users.index'], roles: [USER_TYPE_ADMIN] },
+        { name: 'Hồ sơ',             icon: 'user',     link: route('profile.edit'),  match: ['profile'],     roles: true },
     ]},
 ];
 
-// resolve active + drop forbidden items, hide empty groups
-const groups = rawGroups.map(g => {
-    const items = g.items
-        .filter(it => it.permission)
-        .map(it => ({ ...it, active: isActive(it.match) }));
-    return { label: g.label, items, permission: items.length > 0 };
-});
+// Hiển thị TẤT CẢ item/nhóm; chỉ đánh dấu `allowed` theo vai trò + `active` theo route.
+const groups = rawGroups.map(g => ({
+    label: g.label,
+    items: g.items.map(it => ({
+        ...it,
+        active: isActive(it.match),
+        allowed: it.roles === true || it.roles.includes(userType),
+    })),
+}));
 
 const isOpen = ref(false)
 const isProfileOpen = ref(false)
+
+// ----- Khoá quyền: bấm mục ngoài quyền -> yêu cầu đăng nhập tài khoản có quyền -----
+const lockOpen = ref(false)
+const lockItem = ref(null)
+const lockRoleNames = () => {
+    const it = lockItem.value;
+    if (!it || it.roles === true) return '';
+    return it.roles.map(r => roleLabels[r] || r).join(', ');
+};
+const requestAccess = (item) => {
+    lockItem.value = item;
+    isOpen.value = false;   // đóng drawer mobile nếu đang mở
+    lockOpen.value = true;
+};
+const confirmLogin = () => {
+    // lưu URL đích để sau khi đăng nhập đúng quyền sẽ quay lại (redirect()->intended)
+    router.post(route('logout'), { intended: lockItem.value?.link });
+};
 </script>
 
 <style scoped>

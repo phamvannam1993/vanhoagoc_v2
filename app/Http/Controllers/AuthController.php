@@ -33,23 +33,31 @@ class AuthController extends Controller
 
         if (empty($result['status'])) {
             return back()->withErrors($result['message']);
-        } else {
-            if ($result['isAdmin']) {
-                return redirect(route('apps.dashboard'));
-            } else if ($result['userType'] && ($result['userType']->type !== UserType::TYPE_ADMIN && $result['userType']->type !== UserType::TYPE_EDITOR )) {
-                if ($result['userType']->type === UserType::TYPE_DIRECTOR) {
-                    return redirect(route('admins.school.index'));
-                } else {
-                    return redirect(route('admins.class.index'));
-                }
-            } else {
-                return redirect(route('apps.dashboard'));
-            }
         }
+
+        // Trang mặc định theo vai trò
+        $default = route('apps.dashboard');
+        if (!$result['isAdmin'] && $result['userType']
+            && $result['userType']->type !== UserType::TYPE_ADMIN
+            && $result['userType']->type !== UserType::TYPE_EDITOR) {
+            $default = $result['userType']->type === UserType::TYPE_DIRECTOR
+                ? route('admins.school.index')
+                : route('admins.class.index');
+        }
+
+        // Nếu trước đó người dùng bấm vào 1 chức năng cần quyền (đã lưu url.intended
+        // lúc đăng xuất), quay lại đúng chức năng đó; nếu không thì về trang mặc định.
+        return redirect()->intended($default);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
+        // Lưu URL đích để sau khi đăng nhập bằng tài khoản có quyền sẽ quay lại đúng chức năng.
+        // (logout chỉ gọi Auth::logout(), không invalidate session nên dữ liệu này còn nguyên)
+        if ($request->filled('intended')) {
+            session(['url.intended' => $request->input('intended')]);
+        }
+
         Auth::logout();
 
         return redirect(route('showFormLogin'));
