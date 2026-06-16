@@ -450,8 +450,11 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
 
                 Route::prefix('json')->name('json.')->group(function () {
                     Route::get('/getLesson', [PracticeController::class, 'getLesson'])->name('getLesson');
+                    Route::get('/exercise-items', [PracticeController::class, 'getExerciseItems'])->name('getExerciseItems');
                     Route::post('/assign-practice', [PracticeController::class, 'assignPractice'])->name('assignPractice');
+                    Route::post('/assign-exercise-items', [PracticeController::class, 'assignExerciseItems'])->name('assignExerciseItems');
                     Route::post('/withdraw-practice', [PracticeController::class, 'withDrawPractice'])->name('withDrawPractice');
+                    Route::post('/withdraw-exercise-item', [PracticeController::class, 'withdrawExerciseItem'])->name('withdrawExerciseItem');
                 });
             });
             Route::prefix('points')->name('points.')->group(function () {

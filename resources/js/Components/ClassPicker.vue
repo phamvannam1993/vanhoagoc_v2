@@ -53,12 +53,9 @@ onMounted(async () => {
 const loadApps = async () => {
     try {
         const res = await axios.get('/admins/school/json/list?page=1&search=');
-        console.log('API response:', res.data);
         if (res.data.status) {
             const appList = res.data.data.data || [];
-            console.log('Apps from API:', appList);
             apps.value = appList.map(v => ({ value: v.id, label: v.name }));
-            console.log('Mapped apps:', apps.value);
 
             // Auto-select first app and load classes
             if (appList.length > 0) {
@@ -66,7 +63,6 @@ const loadApps = async () => {
                 await loadClasses();
             }
         } else {
-            console.error('API error:', res.data.message);
             toast.error(res.data.message || 'Không tải được danh sách Đơn vị!');
         }
     } catch (e) {
@@ -86,16 +82,19 @@ const onAppChange = async () => {
     }
 };
 
-const loadClasses = async () => {
-    if (!selectedAppId.value) {
+const loadClasses = async (appId = null) => {
+    const targetAppId = appId || selectedAppId.value;
+    if (!targetAppId) {
         data.value = [];
         return;
     }
     loading.value = true;
     try {
-        const params = { page: pagination.value.current, search: classSearch.value };
-        if (selectedAppId.value) params.app_id = selectedAppId.value;
-        const res = await axios.get(route('admins.class.json.list', params));
+        const id = parseInt(targetAppId);
+        const page = pagination.value.current;
+        const search = classSearch.value;
+        const url = `/admins/class/json/list?page=${page}&search=${search}&app_id=${id}`;
+        const res = await axios.get(url);
         if (res.data.status) {
             const rd = res.data.data;
             data.value = (rd.data || []).map(v => ({
@@ -111,6 +110,7 @@ const loadClasses = async () => {
             pagination.value.current = rd.current_page;
         }
     } catch (e) {
+        console.error('Error loading classes:', e);
         toast.error('Không tải được danh sách Phòng ban/Lớp!');
     } finally {
         loading.value = false;
@@ -136,7 +136,7 @@ const onStudentAppChange = async () => {
     selectedClass.value = null;
     studentSearch.value = '';
     if (studentAppId.value) {
-        await loadClasses();
+        await loadClasses(studentAppId.value);
     } else {
         data.value = [];
     }

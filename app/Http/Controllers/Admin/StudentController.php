@@ -594,16 +594,22 @@ class StudentController extends Controller
     public function getUserPractice(Request $request)
     {
         $studentId = $request->user_id ?? null;
-        $student = User::where('user_id_app', $studentId)->first()
-            ?? $this->userService->findById($studentId);
-        $userClasses = UserClass::where('user_id', $student?->id)->get();
+ 
+        // Try to find student by user_id_app first, then by ID
+        $student = User::where('user_id_app', $studentId)->first();
+        if (!$student && $studentId) {
+            $student = $this->userService->findById($studentId);
+        }
 
-        $userClass = $userClasses->first();
-        if (!$student) {
+        if (!$student || !$student->id) {
             return response()->json([
-                'status' => false
+                'status' => false,
+                'message' => 'Student not found'
             ]);
         }
+
+        $userClasses = UserClass::where('user_id', $student->id)->get();
+        $userClass = $userClasses->first();
 
         $data = [
             'status' => $student->status,
@@ -616,30 +622,65 @@ class StudentController extends Controller
             'updatedAt' => Carbon::parse($student->updated_at)->timestamp,
             'year' => $student->created_at->year
         ];
+
+        // Get all practices in student's class first
         $classId = $student?->classes->first()->id ?? null;
+        $exerciseItemsByPractice = [];
 
+        if ($classId && $student && $student->id) {
+            // Get exercise items in one optimized query using raw SQL
+            $exerciseItemsByPractice = DB::table('assignment_students')
+                ->join('exercise_assignments', 'assignment_students.exercise_assignment_id', '=', 'exercise_assignments.id')
+                ->join('exercise_items', 'exercise_assignments.exercise_item_id', '=', 'exercise_items.id')
+                ->where('assignment_students.student_id', $student->id)
+                ->select('exercise_items.practice_id', 'exercise_items.id')
+                ->get()
+                ->groupBy('practice_id')
+                ->map(fn($items) => $items->pluck('id')->values()->toArray())
+                ->toArray();
+        }
+
+        // Get all practices in student's class - use minimal select to reduce data
         if ($classId) {
-            $allPractices = PracticeClass::with(['practice', 'book', 'week', 'class'])
+            $allPractices = PracticeClass::with(['practice' => fn($q) => $q->select('id', 'practice_id'),
+                                                  'book' => fn($q) => $q->select('id', 'bo_sach', 'lop', 'name'),
+                                                  'week' => fn($q) => $q->select('id', 'week_id'),
+                                                  'class' => fn($q) => $q->select('id')])
                 ->where('class_id', $classId)
+                ->select('id', 'practice_id', 'book_id', 'week_id', 'from', 'to', 'student_id')
                 ->get();
-            
-            $mapItem = fn($item) => [
-                'practice_id'      => ($item->book?->bo_sach ?? '') . '.' . ($item->book?->lop ?? '') . '.' . ($item->book?->name ?? '') . '.quyen1.' . ($item->week?->week_id ?? 0) . '.' . ($item->practice?->practice_id ?? 0),
-                'time'             => Carbon::parse($item->from)->timestamp,
-                'timeout'          => Carbon::parse($item->to)->timestamp,
-                'practice_id_tool' => $item->practice_id,
-            ];
 
+            $mapItem = function($item) use ($exerciseItemsByPractice) {
+                $practiceId = $item->practice_id;
+                $mapped = [
+                    'practice_id'      => ($item->book?->bo_sach ?? '') . '.' . ($item->book?->lop ?? '') . '.' . ($item->book?->name ?? '') . '.quyen1.' . ($item->week?->week_id ?? 0) . '.' . ($item->practice?->practice_id ?? 0),
+                    'time'             => Carbon::parse($item->from)->timestamp,
+                    'timeout'          => Carbon::parse($item->to)->timestamp,
+                    'practice_id_tool' => $item->practice_id,
+                ];
+
+                // Add exercise item IDs if this practice has assignments to this student
+                if (isset($exerciseItemsByPractice[$practiceId])) {
+                    $mapped['exercise_item_ids'] = $exerciseItemsByPractice[$practiceId];
+                }
+         
+                return $mapped;
+            };
+
+            // week_unlock_struct: class-level assignments (student_id is null)
             $data['week_unlock_struct'] = $allPractices
                 ->filter(fn($item) => is_null($item->student_id))
                 ->map($mapItem)
                 ->values();
 
-            $data['week_unlock_struct_personal'] = $allPractices
-                ->filter(fn($item) => $item->student_id == $student->id)
-                ->map($mapItem)
-                ->values();
+            // week_unlock_struct_personal: personal exercise item assignments (from new system)
+            // Include all practices that have exercise item assignments for this student
+            $personalPracticeIds = array_keys($exerciseItemsByPractice);
 
+            $data['week_unlock_struct_personal'] = $allPractices
+                ->filter(fn($item) => in_array($item->practice_id, $personalPracticeIds))
+                ->map($mapItem)
+                ->values();                  
         }
 
         return response()->json([

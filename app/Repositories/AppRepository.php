@@ -33,7 +33,9 @@ class AppRepository extends AbstractRepository
         }
 
         if (!$withoutPoint) {
-            $query = $query->with(['classes.point']);
+            $query = $query->withCount(['classes as classes_with_points' => function($q) {
+                $q->join('points', 'classes.id', '=', 'points.class_id');
+            }]);
         }
     
         if (!empty($filters['search'])) {

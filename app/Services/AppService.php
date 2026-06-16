@@ -58,18 +58,16 @@ class AppService
         $list = $this->appRepository->searchByFilters($data, array_merge($appIds, $parentAppIds), $withoutPoint);
         $user = auth()->user();
 
-        // Bulk load data to avoid N+1 queries
+        // Bulk load data existence to avoid N+1 queries
         $appIdsList = $list->pluck('id')->toArray();
 
-        $novels = \DB::table('novels')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
-        $comments = \DB::table('comments')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
-        $classes = \DB::table('classes')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
-        $books = \DB::table('book')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->get()->keyBy('app_id');
+        $novels = \DB::table('novels')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
+        $comments = \DB::table('comments')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
+        $classes = \DB::table('classes')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
+        $books = \DB::table('book')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
 
         foreach ($list as $item) {
-            $hasResult = !$withoutPoint ? $item->classes->some(function ($class) {
-                return $class->point->isNotEmpty();
-            }) : true;
+            $hasResult = !$withoutPoint ? ($item->classes_with_points > 0) : true;
 
             $item->has_result = $hasResult;
             $item->is_book = isset($books[$item->id]);

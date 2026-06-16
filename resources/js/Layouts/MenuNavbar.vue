@@ -184,7 +184,7 @@ const rawGroups = [
         { name: 'Đơn vị(App)',          icon: 'building', link: route('admins.school.index'),     match: ['admins.school'],       roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR] },
         { name: 'Giám đốc/ Hiệu trưởng', icon: 'userTie', link: route('admins.directors.index'),  match: ['admins.directors'],    roles: [USER_TYPE_ADMIN] },
         { name: 'Quản lý/ Giáo viên',    icon: 'users',   link: route('admins.teachers.index'),   match: ['admins.teachers'],     roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR] },
-        { name: 'Phòng ban/Lớp',         icon: 'grid',    link: route('admins.class.index'),      match: ['admins.class'],        roles: [USER_TYPE_TEACHER] },
+        { name: 'Phòng ban/Lớp',         icon: 'grid',    link: route('admins.class.index'),      match: ['admins.class'],        roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER] },
         { name: 'Nhân viên/ Học sinh',   icon: 'id',      link: route('admins.students.index'),   match: ['admins.students'],     roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR] },
         { name: 'Mã kích hoạt',          icon: 'shield',  link: route('admins.active-codes.index'), match: ['admins.active-codes'], roles: [USER_TYPE_ADMIN] },
     ]},
