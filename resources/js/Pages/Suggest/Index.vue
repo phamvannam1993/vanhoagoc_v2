@@ -5,8 +5,8 @@ import { reactive, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const page = usePage();
-const query = page.props.query;
-const activeKey = ref(query.activeTab ? query.activeTab : '1');
+const query = page.props?.query || {};
+const activeKey = ref(query?.activeTab ? query.activeTab : '1');
 
 const options = ref([
     {
@@ -150,7 +150,7 @@ const onPageChange = (page) => {
                     Danh sách các comment App 3 gốc
                 </h1>
                 <div class="relative mt-6 flex gap-4">
-                    <a-button class="custom-bg mt-3 text-black" size="middle">
+                    <a-button class="custom-bg mt-3 text-black" size="middle" @click="() => window.history.back()">
                         Quay lại
                     </a-button>
                     <a-tabs

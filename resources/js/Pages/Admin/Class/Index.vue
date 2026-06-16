@@ -1,7 +1,7 @@
 <script setup>
 import {Head, usePage} from '@inertiajs/vue3';
 import {SearchOutlined} from '@ant-design/icons-vue';
-import {ref, onMounted, nextTick, defineProps} from 'vue';
+import {ref, onMounted, nextTick, defineProps, computed} from 'vue';
 import {Link} from '@inertiajs/vue3';
 import {useToast} from 'vue-toastification';
 import { USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER } from "@/const.js";
@@ -14,10 +14,10 @@ const props = defineProps({
 });
 const toast = useToast();
 const page = usePage();
-const user = page.props.auth.user;
-const query = page.props.query;
-const app_id = ref(query.app_id);
-const userType = user.user_type.type;
+const user = page.props?.auth?.user;
+const query = page.props?.query || {};
+const app_id = ref(query?.app_id);
+const userType = user?.user_type?.type;
 
 if (userType === USER_TYPE_TEACHER) {
     app_id.value = props.appId
@@ -78,27 +78,77 @@ const columns = baseColumns;
 
 const pagination = ref({
     current: 1,
-    pageSize: 1,
+    pageSize: 10,
     total: 0,
 });
 const data = ref([]);
+const apps = ref([]);
 const formFilter = ref({
     search: '',
     app_id: app_id.value
 });
 const tableRef = ref(null);
+
+const loadApps = async () => {
+    try {
+        const res = await axios.get(route('admins.class.apps'));
+        if (res.data.status) {
+            apps.value = res.data.data.map(app => ({
+                value: app.id,
+                label: app.name
+            }));
+
+            // Nếu có app_id được chọn, convert thành label-in-value format
+            if (formFilter.value.app_id) {
+                const selectedApp = apps.value.find(a => a.value == formFilter.value.app_id);
+                if (selectedApp) {
+                    formFilter.value.app_id = {
+                        value: selectedApp.value,
+                        label: selectedApp.label
+                    };
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading apps:', error);
+    }
+};
+
+const selectedAppName = computed(() => {
+    if (!formFilter.value.app_id || apps.value.length === 0) {
+        return '';
+    }
+    // Fix ID mismatch - convert to string to compare
+    const appId = String(formFilter.value.app_id);
+    const selected = apps.value.find(a => String(a.value) === appId);
+    console.log('Debug:', { appId, apps: apps.value, selected });
+    return selected ? selected.label : '';
+});
+
 onMounted(async () => {
+    await loadApps();
     await loadData();
 });
+const handleAppChange = (value) => {
+    // With label-in-value, value is {label: "...", value: ID}
+    if (value && typeof value === 'object') {
+        formFilter.value.app_id = value.value;
+    } else {
+        formFilter.value.app_id = value;
+    }
+    onSearch();
+};
+
 const loadData = async () => {
-    if (!formFilter.value.app_id && userType !== USER_TYPE_TEACHER) {
+    // Teachers must have app_id, admins can view all
+    if (!formFilter.value.app_id && userType === USER_TYPE_TEACHER) {
         return;
     }
 
     const params = {
         page: pagination.value.current,
         search: formFilter.value.search,
-        app_id: formFilter.value.app_id
+        ...(formFilter.value.app_id && { app_id: formFilter.value.app_id })
     };
 
     try {
@@ -242,7 +292,7 @@ const goBack = () => {
 
 const breadcrumbs = [
     {'title': 'App', 'url': route('admins.school.index')},
-    {'title': page.props.app.name, 'url': route('admins.class.index', {app_id: page.props.app.id})},
+    {'title': page.props?.app?.name || 'Class', 'url': route('admins.class.index', {app_id: page.props?.app?.id})},
 ]
 </script>
 
@@ -269,6 +319,16 @@ const breadcrumbs = [
                     <a-button class="mt-6 ml-5" type="primary">Thêm mới</a-button>
                 </Link>
                 <div class="filter-page mt-6 flex gap-10">
+                    <a-select
+                        v-if="userType === USER_TYPE_ADMIN || userType === USER_TYPE_DIRECTOR"
+                        v-model:value="formFilter.app_id"
+                        placeholder="Chọn App"
+                        style="width: 300px"
+                        :options="apps"
+                        allow-clear
+                        label-in-value
+                        @change="handleAppChange"
+                    />
                     <a-input
                         placeholder="Tìm kiếm"
                         :allow-clear="true"

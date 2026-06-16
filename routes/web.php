@@ -394,6 +394,7 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
                 Route::get('/assignment', [ClassController::class, 'assignment'])->name('assignment');
                 Route::get('/rank-list', [ClassController::class, 'showRank'])->name('showRank');
                 Route::get('/export-rank', [ClassController::class, 'exportRank'])->name('exportRank');
+                Route::get('/apps', [ClassController::class, 'getApps'])->name('apps');
 
                 Route::prefix('json')->name('json.')->group(function () {
                     Route::get('/list', [ClassController::class, 'jsonList'])->name('list');

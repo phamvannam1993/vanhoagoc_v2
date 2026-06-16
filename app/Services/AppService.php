@@ -58,13 +58,43 @@ class AppService
         $list = $this->appRepository->searchByFilters($data, array_merge($appIds, $parentAppIds), $withoutPoint);
         $user = auth()->user();
 
-        // Bulk load data existence to avoid N+1 queries
-        $appIdsList = $list->pluck('id')->toArray();
+        if ($list->isEmpty()) {
+            return $list;
+        }
 
-        $novels = \DB::table('novels')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
-        $comments = \DB::table('comments')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
-        $classes = \DB::table('classes')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
-        $books = \DB::table('book')->whereIn('app_id', $appIdsList)->select('app_id')->distinct()->pluck('app_id')->flip();
+        // Bulk load data - with caching
+        $appIdsList = $list->pluck('id')->toArray();
+        $cacheKey = 'app_data_exists_' . md5(implode('_', $appIdsList));
+
+        // Try to get from cache, otherwise fetch from DB
+        $cachedData = \Cache::get($cacheKey);
+
+        if ($cachedData) {
+            $novels = $cachedData['novels'];
+            $comments = $cachedData['comments'];
+            $classes = $cachedData['classes'];
+            $books = $cachedData['books'];
+        } else {
+            $novels = \DB::table('novels')->whereIn('app_id', $appIdsList)->distinct('app_id')->pluck('app_id')->flip();
+            $comments = \DB::table('comments')->whereIn('app_id', $appIdsList)->distinct('app_id')->pluck('app_id')->flip();
+            $classes = \DB::table('classes')->whereIn('app_id', $appIdsList)->distinct('app_id')->pluck('app_id')->flip();
+            $books = \DB::table('book')->whereIn('app_id', $appIdsList)->distinct('app_id')->pluck('app_id')->flip();
+
+            // Cache for 24 hours
+            \Cache::put($cacheKey, [
+                'novels' => $novels,
+                'comments' => $comments,
+                'classes' => $classes,
+                'books' => $books
+            ], 24 * 60);
+        }
+
+        $userTypeIds = [
+            UserTypeConstant::TYPE_ADMIN,
+            UserTypeConstant::TYPE_EDITOR,
+            UserTypeConstant::TYPE_TEACHER,
+            UserTypeConstant::TYPE_TEACHER_ADMIN
+        ];
 
         foreach ($list as $item) {
             $hasResult = !$withoutPoint ? ($item->classes_with_points > 0) : true;
@@ -75,13 +105,7 @@ class AppService
             $item->is_comment = isset($comments[$item->id]);
             $item->isClass = isset($classes[$item->id]);
 
-            $item->is_show_comment = in_array($user->user_type_id, [
-                UserTypeConstant::TYPE_ADMIN,
-                UserTypeConstant::TYPE_EDITOR,
-                UserTypeConstant::TYPE_TEACHER,
-                UserTypeConstant::TYPE_TEACHER_ADMIN
-            ]);
-
+            $item->is_show_comment = in_array($user->user_type_id, $userTypeIds);
             $item->img = $item->img ? Helper::getCloudFront($item->img) : null;
 
             if (in_array($item->id, $parentAppIds)) {

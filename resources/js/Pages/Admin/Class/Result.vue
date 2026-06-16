@@ -9,9 +9,9 @@ import { USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER } from "@/const.
 
 const toast = useToast();
 const page = usePage();
-const user = page.props.auth.user;
+const user = page.props?.auth?.user;
 const showAdminMenu = !!user.user_type_id && user.user_type_id == 2;
-const query = page.props.query;
+const query = page.props?.query;
 const name =  page.props.name;
 const name_app =  page.props.name_app;
 const class_id = query.class_id;
@@ -230,7 +230,7 @@ const breadcrumbs = [
                     :href="route('admins.class.index', { app_id: app_id, class_id: class_id, tab_id:tab_id })"
                     class="mt-6"
                 >
-                    <a-button class="mt-6 gray-btn">Quay lại</a-button>
+                    <a-button class="mt-6 gray-btn" @click="() => window.history.back()">Quay lại</a-button>
                 </Link>
                 <a
                     :href="route('admins.class.exportResult', { class_id: class_id, tab_id: tab_id })"

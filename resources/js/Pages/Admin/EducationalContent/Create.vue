@@ -47,7 +47,7 @@ async function submit() {
                     </div>
                     <div class="flex gap-3 mt-6">
                         <Link :href="route('admins.educational-contents.index')">
-                            <a-button size="large">Quay lại</a-button>
+                            <a-button size="large" @click="() => window.history.back()">Quay lại</a-button>
                         </Link>
                         <a-button type="primary" size="large" :loading="loading" @click="submit">Lưu</a-button>
                     </div>

@@ -21,10 +21,15 @@ class ClassService
 
     public function getList($data)
     {
-        return $this->classesRepository->searchByFilters($data, [], ['users' => function($q) use($data){
-            $usersClassesTable = UserClass::query()->getModel()->getTable();
-            return $q->where("$usersClassesTable.app_id", $data['app_id']);
-        }]);
+        $users = [];
+        if (!empty($data['app_id'])) {
+            $users = ['users' => function($q) use($data){
+                $usersClassesTable = UserClass::query()->getModel()->getTable();
+                return $q->where("$usersClassesTable.app_id", $data['app_id']);
+            }];
+        }
+
+        return $this->classesRepository->searchByFilters($data, [], $users);
     }
 
     public function store($data)

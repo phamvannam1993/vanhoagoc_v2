@@ -5,8 +5,8 @@ import {Link} from '@inertiajs/vue3';
 import SchoolLayout from "@/Layouts/SchoolLayout.vue";
 
 const page = usePage();
-const user = page.props.auth.user;
-const query = page.props.query;
+const user = page.props?.auth?.user;
+const query = page.props?.query;
 const title =  page.props.title;
 const class_id = query.class_id;
 const user_id = query.user_id;
@@ -181,7 +181,7 @@ const breadcrumbs = [
                     <Link
                         :href="practice_id > 0 ? route('admins.class.resultLearn', { class_id: class_id }) : route('admins.class.index', { app_id: app_id })"
                     >
-                        <a-button class="gray-btn">Quay lại</a-button>
+                        <a-button class="gray-btn" @click="() => window.history.back()">Quay lại</a-button>
                     </Link>
                     <a v-if="tab_id == 2"
                         :href="route('admins.class.exportRank', { class_id: class_id, practice_id: practice_id })"

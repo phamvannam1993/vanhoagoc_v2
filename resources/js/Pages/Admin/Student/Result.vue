@@ -285,7 +285,7 @@ const optionsType = ref([
                     :href="!result_learn ? route('admins.students.index', { class_id: class_id }) : route('admins.class.resultLearn', { class_id: class_id, tab_id:tab_id })"
                     class="mt-6"
                 >
-                    <a-button class="mt-6 gray-btn">Quay lại</a-button>
+                    <a-button class="mt-6 gray-btn" @click="() => window.history.back()">Quay lại</a-button>
                 </Link>
                 <Link v-if="!result_learn"
                     :href="route('admins.students.result', { user_id: user_id, class_id: class_id, tab_id:2 })"

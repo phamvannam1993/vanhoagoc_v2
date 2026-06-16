@@ -170,7 +170,7 @@ const handleOk = () => {
                                 })
                             "
                         >
-                            <a-button class="custom-bg text-black" size="large">
+                            <a-button class="custom-bg text-black" size="large" @click="() => window.history.back()">
                                 Quay lại
                             </a-button>
                         </Link>

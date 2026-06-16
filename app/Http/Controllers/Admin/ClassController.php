@@ -53,6 +53,22 @@ class ClassController extends Controller
         ]);
     }
 
+    public function getApps()
+    {
+        try {
+            $apps = App::select('id', 'name')->get();
+            return response()->json([
+                'status' => true,
+                'data' => $apps
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function create(Request $request): Response
     {
         return Inertia::render('Admin/Class/Create', [

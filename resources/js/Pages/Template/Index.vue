@@ -299,11 +299,7 @@ const handleChangePageSize = () => {
                     Danh sách template của App: {{ props.app.name }}
                 </h1>
                 <div class="relative mt-6 flex gap-4">
-                    <Link :href="route('apps.dashboard')">
-                        <a-button class="custom-bg text-black" size="large">
-                            Quay lại
-                        </a-button>
-                    </Link>
+                    <a-button class="custom-bg mt-3 text-black" size="middle" @click="() => window.history.back()">Quay lại</a-button>
                     <Link :href="route('templates.create', {app_id: app_id})">
                         <a-button class="ml-2" type="primary" size="large">
                             Thêm mới

@@ -9,10 +9,11 @@ import { useToast } from "vue-toastification";
 const props = defineProps({
     app: {
         type: Object,
+        default: () => ({})
     },
     allowedWeekIds: {
         type: Array,
-        default: null,
+        default: () => []
     },
 });
 
@@ -256,14 +257,7 @@ const confirm = (value) => {
                     Danh sách comment - {{ app.name }}
                 </h1>
                 <div class="relative mt-6 flex gap-4">
-                    <Link :href="route('apps.dashboard')">
-                        <a-button
-                            class="custom-bg mt-3 text-black"
-                            size="middle"
-                        >
-                            Quay lại
-                        </a-button>
-                    </Link>
+                    <a-button class="custom-bg mt-3 text-black" size="middle" @click="() => window.history.back()">Quay lại</a-button>
                 </div>
                 <div class="filter-page mt-4 flex gap-10">
                     <a-select

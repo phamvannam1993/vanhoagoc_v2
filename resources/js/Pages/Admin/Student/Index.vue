@@ -408,7 +408,7 @@ const breadcrumbs = [
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">Danh sách Nhân viên/Học sinh</h1>
                 <div class="relative flex gap-4">
                     <Link :href="route('admins.class.index', { app_id: app_id })" class="" >
-                        <a-button class="mt-6 gray-btn">Quay lại</a-button>
+                        <a-button class="mt-6 gray-btn" @click="() => window.history.back()">Quay lại</a-button>
                     </Link>
                     <Link
                         :href="route('admins.students.create', { class_id: class_id })"

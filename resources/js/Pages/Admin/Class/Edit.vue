@@ -20,7 +20,7 @@ const form = useForm({
     year: props.record.year
 });
 const page = usePage();
-const query = page.props.query;
+const query = page.props?.query;
 const app_id = query.app_id;
 const rules = {
     name: yup.string().required("Tên Phòng ban/Lớp không được để trống"),

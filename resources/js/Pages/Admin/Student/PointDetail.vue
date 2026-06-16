@@ -174,7 +174,7 @@ const optionsType = ref([
                     <Link
                         :href="practice_id > 0 ? route('admins.class.showRank', { class_id: class_id, tab_id:tab_id, user_id:user_id, practice_id:practice_id }) : result_learn > 0 ? route('admins.students.result', { class_id: class_id, tab_id:tab_id, user_id:user_id, result_learn:result_learn }) : route('admins.students.result', { class_id: class_id, tab_id:tab_id, user_id:user_id })"
                     >
-                        <a-button class="gray-btn">Quay lại</a-button>
+                        <a-button class="gray-btn" @click="() => window.history.back()">Quay lại</a-button>
                     </Link>
                     <a :href="route('admins.students.json.exportPointDetail', { point_id: query.point_id, user_id: user_id, class_id: class_id })">
                         <a-button type="primary">Xuất Word</a-button>
