@@ -455,7 +455,7 @@ const loadData = async () => {
         for (const practice of practicesToLoad) {
             try {
                 const itemRes = await axios.get(route('admins.practices.json.getExerciseItems'), {
-                    params: { practice_id: practice.id, student_id: student_id, class_id: class_id.value }
+                    params: { practice_id: practice.id, student_id: student_id }
                 });
 
                 if (itemRes.data.status && itemRes.data.data?.length > 0) {

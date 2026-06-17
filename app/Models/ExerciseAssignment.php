@@ -11,7 +11,7 @@ class ExerciseAssignment extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['exercise_item_id', 'class_id', 'class_code', 'due_date', 'due_time', 'note', 'status'];
+    protected $fillable = ['exercise_item_id', 'class_code', 'due_date', 'due_time', 'note', 'status'];
 
     public function exerciseItem(): BelongsTo
     {

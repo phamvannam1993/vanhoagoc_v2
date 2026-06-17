@@ -89,40 +89,6 @@ class ExerciseAssignmentService
     }
 
     /**
-     * Assign exercise items to entire class (not individual students)
-     */
-    public function assignToClass(array $data): array
-    {
-        $practiceId = $data['practice_id'];
-        $classId = $data['class_id'];
-        $itemIds = $data['exercise_item_ids'];
-
-        // Create assignments for the class (not individual students)
-        $fromDate = $data['checkedTime'] ? $data['from'] : date('Y-m-d', strtotime('+1 year'));
-
-        foreach ($itemIds as $itemId) {
-            ExerciseAssignment::create([
-                'exercise_item_id' => $itemId,
-                'class_id' => $classId,
-                'due_date' => $fromDate,
-                'note' => $data['checkedNonTime'] ? "Vô thời hạn" : "",
-                'status' => 'active',
-            ]);
-        }
-
-        Log::info('Exercise items assigned to class', [
-            'practice_id' => $practiceId,
-            'class_id' => $classId,
-            'item_count' => count($itemIds),
-        ]);
-
-        return [
-            'status' => true,
-            'message' => 'Giao bài tập con cho cả lớp thành công'
-        ];
-    }
-
-    /**
      * Withdraw assignment from individual student
      */
     public function withdrawFromStudent(int $exerciseItemId, int $studentId): array
@@ -148,34 +114,6 @@ class ExerciseAssignmentService
         return [
             'status' => true,
             'message' => 'Hủy giao bài tập con thành công'
-        ];
-    }
-
-    /**
-     * Withdraw assignment from entire class
-     */
-    public function withdrawFromClass(int $exerciseItemId, int $classId): array
-    {
-        // Find and delete class assignment
-        $deleted = ExerciseAssignment::where('exercise_item_id', $exerciseItemId)
-            ->where('class_id', $classId)
-            ->delete();
-
-        if ($deleted === 0) {
-            return [
-                'status' => false,
-                'message' => 'Không tìm thấy bài tập con để hủy giao'
-            ];
-        }
-
-        Log::info('Exercise item withdrawn from class', [
-            'exercise_item_id' => $exerciseItemId,
-            'class_id' => $classId,
-        ]);
-
-        return [
-            'status' => true,
-            'message' => 'Hủy giao bài tập con cho cả lớp thành công'
         ];
     }
 }
