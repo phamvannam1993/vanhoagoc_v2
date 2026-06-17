@@ -113,7 +113,7 @@ const loadData = async () => {
                 point_text_1:v.point_text_1,
                 point_text_2:v.point_text_2,
                 total_point:v.total_point,
-                practice_id:v.practice.id,
+                practice_id:v.practice?.id,
                 rank:v.rank,
             };
         });
