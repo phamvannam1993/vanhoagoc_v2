@@ -57,7 +57,7 @@ const columns = [
 
 onMounted(async () => {
     if (isTeacher) {
-        selectedAppId.value = props.appId || null;
+        selectedAppId.value = normalizeId(props.appId) || null;
         await loadClasses();
     } else {
         await loadApps();
