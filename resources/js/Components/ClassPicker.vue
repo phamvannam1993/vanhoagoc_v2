@@ -18,8 +18,22 @@ const user = page.props.auth.user;
 const userType = user.user_type.type;
 const isTeacher = userType === USER_TYPE_TEACHER;
 
+const normalizeId = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+
+    const raw = typeof value === 'object'
+        ? (value.value ?? value.id ?? null)
+        : value;
+
+    if (raw === null || raw === undefined || raw === '') return null;
+
+    const numberId = Number(raw);
+
+    return Number.isNaN(numberId) ? null : numberId;
+};
+
 const apps = ref([]);
-const selectedAppId = ref(props.appId || null);
+const selectedAppId = ref(normalizeId(props.appId));
 const classSearch = ref('');
 const data = ref([]);
 const loading = ref(false);
@@ -71,32 +85,43 @@ const loadApps = async () => {
     }
 };
 
-const onAppChange = async () => {
+const onAppChange = async (value) => {
+    selectedAppId.value = normalizeId(value ?? selectedAppId.value);
+
     pagination.value.current = 1;
     studentPagination.value.current = 1;
     selectedClass.value = null;
     studentSearch.value = '';
+
     await loadClasses();
+
     if (activeTab.value === 'student') {
         await loadStudents();
     }
 };
 
 const loadClasses = async (appId = null) => {
-    const targetAppId = appId || selectedAppId.value;
+    const targetAppId = normalizeId(appId ?? selectedAppId.value);
+
     if (!targetAppId) {
         data.value = [];
         return;
     }
+
     loading.value = true;
+
     try {
-        const id = parseInt(targetAppId);
-        const page = pagination.value.current;
-        const search = classSearch.value;
-        const url = `/admins/class/json/list?page=${page}&search=${search}&app_id=${id}`;
-        const res = await axios.get(url);
+        const res = await axios.get('/admins/class/json/list', {
+            params: {
+                page: pagination.value.current,
+                search: classSearch.value || '',
+                app_id: targetAppId,
+            }
+        });
+
         if (res.data.status) {
             const rd = res.data.data;
+
             data.value = (rd.data || []).map(v => ({
                 id: v.id,
                 app_id: v.app_id,
@@ -105,6 +130,7 @@ const loadClasses = async (appId = null) => {
                 is_result: v.is_result,
                 isAssign: (v.practice_class ?? []).length > 0,
             }));
+
             pagination.value.pageSize = rd.per_page;
             pagination.value.total = rd.total;
             pagination.value.current = rd.current_page;
@@ -131,31 +157,43 @@ const onPageChange = (p) => { pagination.value.current = p; loadClasses(); };
 const onSearch = () => { pagination.value.current = 1; loadClasses(); };
 const removeFilter = () => { classSearch.value = ''; onSearch(); };
 
-const onStudentAppChange = async () => {
+const onStudentAppChange = async (value) => {
+    studentAppId.value = normalizeId(value ?? studentAppId.value);
+
     studentPagination.value.current = 1;
     selectedClass.value = null;
     studentSearch.value = '';
+
     if (studentAppId.value) {
         await loadClasses(studentAppId.value);
     } else {
         data.value = [];
     }
+
     await loadStudents();
 };
 
 const loadStudents = async () => {
     studentLoading.value = true;
+
     try {
+        const appId = normalizeId(studentAppId.value);
+        const classId = normalizeId(selectedClass.value);
+
         const params = {
             page: studentPagination.value.current,
             per_page: studentPagination.value.pageSize,
-            search: studentSearch.value
+            search: studentSearch.value || '',
         };
-        if (studentAppId.value) params.app_id = studentAppId.value;
-        if (selectedClass.value) params.class_id = selectedClass.value;
+
+        if (appId) params.app_id = appId;
+        if (classId) params.class_id = classId;
+
         const res = await axios.get(route('admins.students.json.resultSummaryByApp', params));
+
         if (res.data.status) {
             const rd = res.data.data;
+
             studentData.value = (rd.data || []).map(v => ({
                 id: v.id,
                 name: v.name,
@@ -169,11 +207,13 @@ const loadStudents = async () => {
                 total_score: v.total_score ?? 0,
                 is_result: v.is_result
             }));
+
             studentPagination.value.pageSize = rd.per_page;
             studentPagination.value.total = rd.total;
             studentPagination.value.current = rd.current_page;
         }
     } catch (e) {
+        console.error('Error loading students:', e);
         toast.error('Không tải được danh sách học sinh!');
     } finally {
         studentLoading.value = false;
@@ -235,6 +275,7 @@ const onClassFilterChange = () => {
                             style="width: 22rem"
                             size="large"
                             @change="onAppChange"
+                            :field-names="{ value: 'value', label: 'label' }"
                         />
                         <a-input
                             placeholder="Tìm kiếm lớp"
@@ -320,6 +361,7 @@ const onClassFilterChange = () => {
                             style="width: 22rem"
                             size="large"
                             @change="onStudentAppChange"
+                            :field-names="{ value: 'value', label: 'label' }"
                         />
                         <a-select
                             v-model:value="selectedClass"

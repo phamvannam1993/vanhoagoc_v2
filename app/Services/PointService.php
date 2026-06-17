@@ -448,7 +448,8 @@ class PointService
 
         foreach($practiceData as $item) {
             $week = Week::where('id',  $item->practice->week_id)->first();
-            $item->name = $item->book->title.' - '.$week->name.' - '. $item->practice->name;
+            $weekName = $week ? $week->name : 'Unknown Week';
+            $item->name = $item->book->title.' - '.$weekName.' - '. $item->practice->name;
             $item->point_text = "";
             $item->duration = "";
             if($item->from) {
