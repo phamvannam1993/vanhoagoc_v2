@@ -47,11 +47,22 @@ class PracticeController extends Controller
 
     public function index(Request $request): Response
     {
+        $studentId = $request->student_id;
+        $classId = $request->class_id;
+
+        // Route to class assignment page if no student_id
+        if (!$studentId && $classId) {
+            return Inertia::render('Admin/Class/AssignPractice', [
+                'query' => $request->query(),
+            ]);
+        }
+
+        // Individual student assignment page
         return Inertia::render('Admin/Teacher/AssignPractice', [
             'query'      => $request->query(),
-            'student_id' => $request->student_id,
-            'student_name' => $request->student_id
-                ? \App\Models\User::find($request->student_id)?->name
+            'student_id' => $studentId,
+            'student_name' => $studentId
+                ? \App\Models\User::find($studentId)?->name
                 : null,
         ]);
     }
