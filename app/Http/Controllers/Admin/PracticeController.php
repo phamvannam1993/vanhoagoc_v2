@@ -245,8 +245,7 @@ class PracticeController extends Controller
         try {
             $validated = $request->validate([
                 'practice_id' => 'required|integer',
-                'student_id' => 'nullable|integer',
-                'class_id' => 'nullable|integer',
+                'student_id' => 'required|integer',
                 'exercise_item_ids' => 'required|array',
                 'exercise_item_ids.*' => 'integer',
                 'checkedTime' => 'boolean',
@@ -255,17 +254,7 @@ class PracticeController extends Controller
                 'to' => 'nullable|date_format:Y/m/d',
             ]);
 
-            if ($validated['student_id']) {
-                $result = $assignmentService->assignToStudent($validated);
-            } elseif ($validated['class_id']) {
-                $result = $assignmentService->assignToClass($validated);
-            } else {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Cần cung cấp student_id hoặc class_id'
-                ], 422);
-            }
-
+            $result = $assignmentService->assignToStudent($validated);
             return response()->json($result);
         } catch (\Exception $e) {
             Log::error('Error assigning exercise items: ' . $e->getMessage());
@@ -274,6 +263,44 @@ class PracticeController extends Controller
                 'message' => 'Lỗi giao bài tập con: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function assignPractice(Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->all();
+        $data['user_id'] = $user->id;
+        $data['student_id'] = $request->student_id ?? null;
+        $result = $this->practiceClassService->store($data);
+
+        if ($result) {
+            return response()->json([
+                'status' => true,
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+        ]);
+    }
+
+    public function withDrawPractice(Request $request)
+    {
+        $user = Auth::user();
+        $practiceId = $request->practice_id;
+        $classId = $request->class_id;
+        $studentId = $request->student_id ?? null;
+        $result = $this->practiceClassService->deleteById($user->id, $practiceId, $classId, $studentId);
+
+        if ($result) {
+            return response()->json([
+                'status' => true,
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+        ]);
     }
 
     public function withdrawExerciseItem(Request $request, ExerciseAssignmentService $assignmentService)
