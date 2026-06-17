@@ -170,6 +170,7 @@ class PracticeController extends Controller
         try {
             $practiceId = $request->get('practice_id');
             $studentId = $request->get('student_id');
+            $classId = $request->get('class_id');
 
             if (!$practiceId) {
                 return response()->json([
@@ -183,24 +184,37 @@ class PracticeController extends Controller
                 ->orderBy('order')
                 ->get();
 
-            // Get assigned item IDs if student_id provided
-            $assignedItemIds = [];
+            // Get individual student assignments
+            $individualAssignedIds = [];
             if ($studentId) {
-                $assignedItemIds = \App\Models\AssignmentStudent::where('student_id', $studentId)
+                $individualAssignedIds = \App\Models\AssignmentStudent::where('student_id', $studentId)
                     ->join('exercise_assignments', 'assignment_students.exercise_assignment_id', '=', 'exercise_assignments.id')
                     ->whereIn('exercise_assignments.exercise_item_id', $items->pluck('id'))
                     ->pluck('exercise_assignments.exercise_item_id')
                     ->toArray();
             }
 
-            $result = $items->map(function($item) use ($assignedItemIds) {
+            // Get class-level assignments
+            $classAssignedIds = [];
+            if ($classId) {
+                $classAssignedIds = \App\Models\ExerciseAssignment::where('class_id', $classId)
+                    ->whereIn('exercise_item_id', $items->pluck('id'))
+                    ->pluck('exercise_item_id')
+                    ->toArray();
+            }
+
+            $result = $items->map(function($item) use ($individualAssignedIds, $classAssignedIds) {
+                $isIndividualAssigned = in_array($item->id, $individualAssignedIds);
+                $isClassAssigned = in_array($item->id, $classAssignedIds);
+
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
                     'level' => $item->level,
                     'order' => $item->order,
                     'total_questions' => $item->question_editors_count,
-                    'is_assigned' => in_array($item->id, $assignedItemIds),
+                    'is_assigned' => $isIndividualAssigned || $isClassAssigned,
+                    'assignment_type' => $isIndividualAssigned ? 'student' : ($isClassAssigned ? 'class' : null),
                 ];
             });
 
@@ -208,6 +222,7 @@ class PracticeController extends Controller
                 'practice_id' => $practiceId,
                 'count' => count($result),
                 'student_id' => $studentId,
+                'class_id' => $classId,
             ]);
 
             return response()->json([
