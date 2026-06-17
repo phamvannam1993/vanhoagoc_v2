@@ -315,8 +315,8 @@ const confirmAssign = async () => {
 
             openAssign.value = false;
             toast.success('Giao bài tập con thành công');
-            // Don't reload - just update UI
-            data.value = [...data.value];
+            // Reload data to refresh all state including practice-level assignment status
+            await loadData();
         } else {
             // Handle error response from backend
             toast.error(res.data.message || 'Lỗi giao bài tập con');
