@@ -432,13 +432,21 @@ const loadData = async () => {
 
         console.log('Data loaded, booksData:', booksData);
 
-        // Preload exercise items for all practices to detect both individual
-        // and class-level assignments (practice.assign only tracks individual)
+        // Preload exercise items only for practices with assignments to avoid excessive API calls
+        // Note: This only catches individual assignments (practice.assign), not class-level.
+        // Class-level assignment status shows on expand.
         const practicesToLoad = [];
+        let preloadCount = 0;
+        const maxPreload = 5;  // Limit preloading to avoid too many API calls
+
         booksData.forEach(book => {
             book.children?.forEach(week => {
                 week.children?.forEach(practice => {
-                    practicesToLoad.push(practice);  // Load all, not just practice.assign
+                    // Preload practices with individual assignments, up to limit
+                    if (preloadCount < maxPreload && practice.assign) {
+                        practicesToLoad.push(practice);
+                        preloadCount++;
+                    }
                 });
             });
         });
