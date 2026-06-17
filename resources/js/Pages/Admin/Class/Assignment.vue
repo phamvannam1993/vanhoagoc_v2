@@ -307,10 +307,10 @@ const handleChangeType = (value) => {
     margin-top: -40px;
 }
 .ant-btn {
-    font-size: 14px;
+    font-size: 13px;
     height: 32px;
-    padding: 4px 15px;
-    border-radius: 6px;
+    padding: 5px;
+    border-radius: 5px;
 }
 .ant-btn-primary {
     color: #fff;
