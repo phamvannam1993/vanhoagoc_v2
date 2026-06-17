@@ -301,10 +301,12 @@ class PracticeController extends Controller
                 // Single student assignment
                 $studentIds = [$studentId];
             } elseif ($classId) {
-                // Class-level assignment - get all students in the class
-                $studentIds = \App\Models\UserClass::where('class_id', $classId)
-                    ->where('user_type_id', 3)  // 3 = student
-                    ->pluck('user_id')
+                // Class-level assignment - get all users in the class
+                // Join with users table to filter by user_type_id
+                $studentIds = \App\Models\UserClass::where('users_classes.class_id', $classId)
+                    ->join('users', 'users_classes.user_id', '=', 'users.id')
+                    ->where('users.user_type_id', 3)  // 3 = student
+                    ->pluck('users_classes.user_id')
                     ->toArray();
             }
 
@@ -385,9 +387,10 @@ class PracticeController extends Controller
                 ]);
             } elseif ($classId) {
                 // Class-level withdrawal - remove all students in the class
-                $studentIds = \App\Models\UserClass::where('class_id', $classId)
-                    ->where('user_type_id', 3)  // 3 = student
-                    ->pluck('user_id')
+                $studentIds = \App\Models\UserClass::where('users_classes.class_id', $classId)
+                    ->join('users', 'users_classes.user_id', '=', 'users.id')
+                    ->where('users.user_type_id', 3)  // 3 = student
+                    ->pluck('users_classes.user_id')
                     ->toArray();
 
                 if (!empty($studentIds)) {
