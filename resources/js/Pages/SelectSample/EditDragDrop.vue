@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm as useInertiaForm, usePage } from "@inertiajs/vue3";
-import SchoolLayout from "@/Layouts/SchoolLayout.vue";
+import MasterLayout from "@/Layouts/MasterLayout.vue";
 import { ErrorMessage, Field, Form } from "vee-validate";
 import * as yup from "yup";
 import InputError from "@/Components/InputError.vue";
@@ -212,14 +212,17 @@ const submittedData = ref([]);
 const submittedConnectData = ref([]);
 const handleSubmit = () => {
     // For listAnswer (left column - cot_a), use the correct format
-    submittedData.value = form.listAnswer.map((item, idx) => ({
+    submittedData.value = form.listAnswer.map((item) => ({
         type: 'text',
-        type_answer: 1,
-        value: item.inputAnswer,
-        answer_val: item.inputAnswer,
+        type_answer: item.type_answer ?? 1,
+        value: item.inputAnswer ?? '',
+        answer_val: item.inputAnswer ?? '',
         checked: false,
-        inputNumber: idx === 0 ? '' : String(idx),
-        answer_text: item.inputAnswer
+
+        // Sửa dòng này: lấy đúng giá trị người dùng nhập
+        inputNumber: item.inputNumber ?? '',
+
+        answer_text: item.inputAnswer ?? ''
     }));
 
     // For linking questions, prepare answer_connects data (right column - cot_b)
@@ -670,7 +673,7 @@ const getAnswerMaxLength = () => {
 <template>
     <Head title="Edit Question Drag Drop" />
 
-    <SchoolLayout :breadcrumbs=breadcrumbs>
+    <MasterLayout :breadcrumbs=breadcrumbs>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Edit Question Drag Drop
@@ -943,9 +946,11 @@ const getAnswerMaxLength = () => {
                                                 :class="`mt-2 flex items-center justify-center gap-2`"
                                             >
                                                 <div class="flex gap-4 items-center">
-                                                    <input
-                                                        v-model="item.inputNumber"
-                                                        class="h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5]"
+                                                    <a-input
+                                                         v-model:value="item.inputNumber"
+                                                        placeholder="Nhập STT"
+                                                        size="large"
+                                                        class="w-32 border-blue-400"
                                                     />
                                                     <a-button
                                                         v-if="infoTemplate.add_answer === 1"
@@ -1229,7 +1234,7 @@ const getAnswerMaxLength = () => {
                 <p class="mt-4 text-lg font-medium">Đang tải lên...</p>
             </div>
         </a-modal>
-    </SchoolLayout>
+    </MasterLayout>
 </template>
 <style lang="scss">
 .custom-height {
