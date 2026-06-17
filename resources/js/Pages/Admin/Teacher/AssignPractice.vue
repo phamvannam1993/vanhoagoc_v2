@@ -432,14 +432,13 @@ const loadData = async () => {
 
         console.log('Data loaded, booksData:', booksData);
 
-        // Preload exercise items for practices that have assignments
+        // Preload exercise items for all practices to detect both individual
+        // and class-level assignments (practice.assign only tracks individual)
         const practicesToLoad = [];
         booksData.forEach(book => {
             book.children?.forEach(week => {
                 week.children?.forEach(practice => {
-                    if (practice.assign) {  // Only load for practices with assignments
-                        practicesToLoad.push(practice);
-                    }
+                    practicesToLoad.push(practice);  // Load all, not just practice.assign
                 });
             });
         });
