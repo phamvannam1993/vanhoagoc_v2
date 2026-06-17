@@ -44,11 +44,11 @@ const columns = [
         key: "name",
         customRender: ({ record }) => {
             if (record.level === "week") {
-                return h("div", { class: "font-semibold text-gray-800" }, record.name);
+                return h("div", { class: "font-semibold text-gray-800 truncate" }, record.name);
             } else if (record.level === "practice") {
-                return h("div", { class: "pl-6 text-gray-700" }, record.name);
+                return h("div", { class: "pl-6 text-gray-700 truncate" }, record.name);
             }
-            return record.name;
+            return h("div", { class: "truncate" }, record.name);
         }
     },
     {
@@ -275,6 +275,17 @@ onMounted(async () => {
     await loadData();
 });
 </script>
+
+<style scoped>
+:deep(.ant-table-cell) {
+    padding: 8px 12px !important;
+    white-space: nowrap;
+}
+
+:deep(.ant-table-row) {
+    height: auto;
+}
+</style>
 
 <template>
     <Head>
