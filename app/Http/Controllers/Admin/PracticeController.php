@@ -250,25 +250,6 @@ class PracticeController extends Controller
         }
     }
 
-    public function assignPractice(Request $request)
-    {
-        $user = Auth::user();
-        $data = $request->all();
-        $data['user_id'] = $user->id;
-        $data['student_id'] = $request->student_id ?? null;
-        $result = $this->practiceClassService->store($data);
-
-        if ($result) {
-            return response()->json([
-                'status' => true,
-            ]);
-        }
-
-        return response()->json([
-            'status' => false,
-        ]);
-    }
-
     public function withDrawPractice(Request $request)
     {
         $user = Auth::user();
