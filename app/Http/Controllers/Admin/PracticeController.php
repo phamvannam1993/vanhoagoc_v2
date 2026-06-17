@@ -295,6 +295,19 @@ class PracticeController extends Controller
                 $fromDate = date('Y-m-d', strtotime('+1 year'));
             }
 
+            // Get students to assign to
+            $studentIds = [];
+            if ($studentId) {
+                // Single student assignment
+                $studentIds = [$studentId];
+            } elseif ($classId) {
+                // Class-level assignment - get all students in the class
+                $studentIds = \App\Models\UserClass::where('class_id', $classId)
+                    ->where('user_type_id', 3)  // 3 = student
+                    ->pluck('user_id')
+                    ->toArray();
+            }
+
             // Assign each exercise item
             foreach ($itemIds as $itemId) {
                 $assignment = \App\Models\ExerciseAssignment::create([
@@ -305,11 +318,11 @@ class PracticeController extends Controller
                     'status' => 'active',
                 ]);
 
-                // If student_id provided, also track the specific student
-                if ($studentId) {
+                // Assign to all students
+                foreach ($studentIds as $sid) {
                     \App\Models\AssignmentStudent::firstOrCreate([
                         'exercise_assignment_id' => $assignment->id,
-                        'student_id' => $studentId,
+                        'student_id' => $sid,
                     ], [
                         'status' => 'pending',
                     ]);
@@ -349,33 +362,51 @@ class PracticeController extends Controller
             $studentId = $validated['student_id'];
             $classId = $validated['class_id'];
 
-            // Find and delete the assignment
-            if ($studentId && $exerciseItemId) {
-                // Find exercise assignments for this item
-                $assignments = \App\Models\ExerciseAssignment::where('exercise_item_id', $exerciseItemId)->pluck('id')->toArray();
+            // Find exercise assignments for this item
+            $assignments = \App\Models\ExerciseAssignment::where('exercise_item_id', $exerciseItemId)->pluck('id')->toArray();
 
-                if (!empty($assignments)) {
-                    // Delete assignment student records
+            if (empty($assignments)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Không tìm thấy bài tập con để hủy giao'
+                ], 404);
+            }
+
+            // Delete assignment based on scope
+            if ($studentId) {
+                // Individual student withdrawal
+                \App\Models\AssignmentStudent::whereIn('exercise_assignment_id', $assignments)
+                    ->where('student_id', $studentId)
+                    ->delete();
+
+                Log::info('Exercise item assignment withdrawn', [
+                    'exercise_item_id' => $exerciseItemId,
+                    'student_id' => $studentId,
+                ]);
+            } elseif ($classId) {
+                // Class-level withdrawal - remove all students in the class
+                $studentIds = \App\Models\UserClass::where('class_id', $classId)
+                    ->where('user_type_id', 3)  // 3 = student
+                    ->pluck('user_id')
+                    ->toArray();
+
+                if (!empty($studentIds)) {
                     \App\Models\AssignmentStudent::whereIn('exercise_assignment_id', $assignments)
-                        ->where('student_id', $studentId)
+                        ->whereIn('student_id', $studentIds)
                         ->delete();
 
-                    Log::info('Exercise item assignment withdrawn', [
+                    Log::info('Exercise item assignment withdrawn from class', [
                         'exercise_item_id' => $exerciseItemId,
-                        'student_id' => $studentId,
-                    ]);
-
-                    return response()->json([
-                        'status' => true,
-                        'message' => 'Hủy giao bài tập con thành công'
+                        'class_id' => $classId,
+                        'student_count' => count($studentIds),
                     ]);
                 }
             }
 
             return response()->json([
-                'status' => false,
-                'message' => 'Không tìm thấy bài tập con để hủy giao'
-            ], 404);
+                'status' => true,
+                'message' => 'Hủy giao bài tập con thành công'
+            ]);
         } catch (\Exception $e) {
             Log::error('Error withdrawing exercise item: ' . $e->getMessage());
             return response()->json([
