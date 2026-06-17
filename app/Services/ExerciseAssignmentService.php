@@ -89,7 +89,7 @@ class ExerciseAssignmentService
     }
 
     /**
-     * Assign exercise items to entire class
+     * Assign exercise items to entire class (not individual students)
      */
     public function assignToClass(array $data): array
     {
@@ -97,46 +97,22 @@ class ExerciseAssignmentService
         $classId = $data['class_id'];
         $itemIds = $data['exercise_item_ids'];
 
-        // Get all students in the class
-        $studentIds = UserClass::where('users_classes.class_id', $classId)
-            ->join('users', 'users_classes.user_id', '=', 'users.id')
-            ->where('users.user_type_id', 3)  // 3 = student
-            ->pluck('users_classes.user_id')
-            ->toArray();
-
-        if (empty($studentIds)) {
-            return [
-                'status' => false,
-                'message' => 'Lớp không có học sinh'
-            ];
-        }
-
-        // Create assignments for all students
+        // Create assignments for the class (not individual students)
         $fromDate = $data['checkedTime'] ? $data['from'] : date('Y-m-d', strtotime('+1 year'));
 
         foreach ($itemIds as $itemId) {
-            $assignment = ExerciseAssignment::create([
+            ExerciseAssignment::create([
                 'exercise_item_id' => $itemId,
                 'class_code' => "class_$classId",
                 'due_date' => $fromDate,
                 'note' => $data['checkedNonTime'] ? "Vô thời hạn" : "",
                 'status' => 'active',
             ]);
-
-            foreach ($studentIds as $studentId) {
-                AssignmentStudent::firstOrCreate([
-                    'exercise_assignment_id' => $assignment->id,
-                    'student_id' => $studentId,
-                ], [
-                    'status' => 'pending',
-                ]);
-            }
         }
 
         Log::info('Exercise items assigned to class', [
             'practice_id' => $practiceId,
             'class_id' => $classId,
-            'student_count' => count($studentIds),
             'item_count' => count($itemIds),
         ]);
 
@@ -180,33 +156,22 @@ class ExerciseAssignmentService
      */
     public function withdrawFromClass(int $exerciseItemId, int $classId): array
     {
-        $assignments = ExerciseAssignment::where('exercise_item_id', $exerciseItemId)->pluck('id')->toArray();
+        // Find and delete class assignment
+        $deleted = ExerciseAssignment::where('exercise_item_id', $exerciseItemId)
+            ->where('class_code', "class_$classId")
+            ->delete();
 
-        if (empty($assignments)) {
+        if ($deleted === 0) {
             return [
                 'status' => false,
                 'message' => 'Không tìm thấy bài tập con để hủy giao'
             ];
         }
 
-        // Get all students in class
-        $studentIds = UserClass::where('users_classes.class_id', $classId)
-            ->join('users', 'users_classes.user_id', '=', 'users.id')
-            ->where('users.user_type_id', 3)
-            ->pluck('users_classes.user_id')
-            ->toArray();
-
-        if (!empty($studentIds)) {
-            AssignmentStudent::whereIn('exercise_assignment_id', $assignments)
-                ->whereIn('student_id', $studentIds)
-                ->delete();
-
-            Log::info('Exercise item withdrawn from class', [
-                'exercise_item_id' => $exerciseItemId,
-                'class_id' => $classId,
-                'student_count' => count($studentIds),
-            ]);
-        }
+        Log::info('Exercise item withdrawn from class', [
+            'exercise_item_id' => $exerciseItemId,
+            'class_id' => $classId,
+        ]);
 
         return [
             'status' => true,
