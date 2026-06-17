@@ -10,6 +10,7 @@ use App\Models\UserType;
 use App\Services\Admin\Class\ClassService;
 use App\Services\AppService;
 use App\Services\BookService;
+use App\Services\ExerciseAssignmentService;
 use App\Services\PracticeClassService;
 use App\Services\PracticeService;
 use App\Services\RoleService;
@@ -224,7 +225,7 @@ class PracticeController extends Controller
         }
     }
 
-    public function assignExerciseItems(Request $request)
+    public function assignExerciseItems(Request $request, ExerciseAssignmentService $assignmentService)
     {
         try {
             $validated = $request->validate([
@@ -239,17 +240,18 @@ class PracticeController extends Controller
                 'to' => 'nullable|date_format:Y/m/d',
             ]);
 
-            // Route to appropriate handler based on assignment type
             if ($validated['student_id']) {
-                return $this->assignToIndividualStudent($validated);
+                $result = $assignmentService->assignToStudent($validated);
             } elseif ($validated['class_id']) {
-                return $this->assignToClass($validated);
+                $result = $assignmentService->assignToClass($validated);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Cần cung cấp student_id hoặc class_id'
+                ], 422);
             }
 
-            return response()->json([
-                'status' => false,
-                'message' => 'Cần cung cấp student_id hoặc class_id'
-            ], 422);
+            return response()->json($result);
         } catch (\Exception $e) {
             Log::error('Error assigning exercise items: ' . $e->getMessage());
             return response()->json([
@@ -259,135 +261,7 @@ class PracticeController extends Controller
         }
     }
 
-    private function assignToIndividualStudent($validated)
-    {
-        $practiceId = $validated['practice_id'];
-        $studentId = $validated['student_id'];
-        $itemIds = $validated['exercise_item_ids'];
-
-        // Auto-detect class_id from student
-        $classId = null;
-        $userClassRecord = \App\Models\UserClass::where('user_id', $studentId)->first();
-        if ($userClassRecord && $userClassRecord->class_id) {
-            $classId = $userClassRecord->class_id;
-        }
-
-        // Validate: Check if student already has assignment for these items
-        $duplicateCount = \App\Models\AssignmentStudent::where('student_id', $studentId)
-            ->join('exercise_assignments', 'assignment_students.exercise_assignment_id', '=', 'exercise_assignments.id')
-            ->whereIn('exercise_assignments.exercise_item_id', $itemIds)
-            ->count();
-
-        if ($duplicateCount > 0) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Học sinh này đã được giao một số bài tập con này rồi. Vui lòng kiểm tra lại!'
-            ], 422);
-        }
-
-        // Validate: Check if student has assignment for ANY item in this practice
-        $allItemsInPractice = \App\Models\ExerciseItem::where('practice_id', $practiceId)->pluck('id')->toArray();
-        $existingAssignmentCount = \App\Models\AssignmentStudent::where('student_id', $studentId)
-            ->join('exercise_assignments', 'assignment_students.exercise_assignment_id', '=', 'exercise_assignments.id')
-            ->whereIn('exercise_assignments.exercise_item_id', $allItemsInPractice)
-            ->count();
-
-        if ($existingAssignmentCount > 0) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Học sinh này đã được giao 1 bài tập con trong bài tập này rồi. Mỗi học sinh chỉ được giao 1 bài con duy nhất!'
-            ], 422);
-        }
-
-        // Prepare dates
-        $fromDate = $validated['checkedTime'] ? $validated['from'] : date('Y-m-d', strtotime('+1 year'));
-
-        // Create assignments
-        foreach ($itemIds as $itemId) {
-            $assignment = \App\Models\ExerciseAssignment::create([
-                'exercise_item_id' => $itemId,
-                'class_code' => "class_$classId",
-                'due_date' => $fromDate,
-                'note' => $validated['checkedNonTime'] ? "Vô thời hạn" : "",
-                'status' => 'active',
-            ]);
-
-            \App\Models\AssignmentStudent::firstOrCreate([
-                'exercise_assignment_id' => $assignment->id,
-                'student_id' => $studentId,
-            ], [
-                'status' => 'pending',
-            ]);
-        }
-
-        Log::info('Exercise items assigned to individual', [
-            'practice_id' => $practiceId,
-            'student_id' => $studentId,
-            'class_id' => $classId,
-        ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Giao bài tập con thành công'
-        ]);
-    }
-
-    private function assignToClass($validated)
-    {
-        $practiceId = $validated['practice_id'];
-        $classId = $validated['class_id'];
-        $itemIds = $validated['exercise_item_ids'];
-
-        // Get all students in class
-        $studentIds = \App\Models\UserClass::where('users_classes.class_id', $classId)
-            ->join('users', 'users_classes.user_id', '=', 'users.id')
-            ->where('users.user_type_id', 3)
-            ->pluck('users_classes.user_id')
-            ->toArray();
-
-        if (empty($studentIds)) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Lớp không có học sinh'
-            ], 422);
-        }
-
-        // Prepare dates
-        $fromDate = $validated['checkedTime'] ? $validated['from'] : date('Y-m-d', strtotime('+1 year'));
-
-        // Create assignments for all students
-        foreach ($itemIds as $itemId) {
-            $assignment = \App\Models\ExerciseAssignment::create([
-                'exercise_item_id' => $itemId,
-                'class_code' => "class_$classId",
-                'due_date' => $fromDate,
-                'note' => $validated['checkedNonTime'] ? "Vô thời hạn" : "",
-                'status' => 'active',
-            ]);
-
-            foreach ($studentIds as $studentId) {
-                \App\Models\AssignmentStudent::firstOrCreate([
-                    'exercise_assignment_id' => $assignment->id,
-                    'student_id' => $studentId,
-                ], [
-                    'status' => 'pending',
-                ]);
-            }
-        }
-
-        Log::info('Exercise items assigned to class', [
-            'practice_id' => $practiceId,
-            'class_id' => $classId,
-            'student_count' => count($studentIds),
-        ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Giao bài tập con cho cả lớp thành công'
-        ]);
-    }
-
-    public function withdrawExerciseItem(Request $request)
+    public function withdrawExerciseItem(Request $request, ExerciseAssignmentService $assignmentService)
     {
         try {
             $validated = $request->validate([
@@ -396,56 +270,24 @@ class PracticeController extends Controller
                 'class_id' => 'nullable|integer',
             ]);
 
-            $exerciseItemId = $validated['exercise_item_id'];
-            $studentId = $validated['student_id'];
-            $classId = $validated['class_id'];
-
-            // Find exercise assignments for this item
-            $assignments = \App\Models\ExerciseAssignment::where('exercise_item_id', $exerciseItemId)->pluck('id')->toArray();
-
-            if (empty($assignments)) {
+            if ($validated['student_id']) {
+                $result = $assignmentService->withdrawFromStudent(
+                    $validated['exercise_item_id'],
+                    $validated['student_id']
+                );
+            } elseif ($validated['class_id']) {
+                $result = $assignmentService->withdrawFromClass(
+                    $validated['exercise_item_id'],
+                    $validated['class_id']
+                );
+            } else {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Không tìm thấy bài tập con để hủy giao'
-                ], 404);
+                    'message' => 'Cần cung cấp student_id hoặc class_id'
+                ], 422);
             }
 
-            // Delete assignment based on scope
-            if ($studentId) {
-                // Individual student withdrawal
-                \App\Models\AssignmentStudent::whereIn('exercise_assignment_id', $assignments)
-                    ->where('student_id', $studentId)
-                    ->delete();
-
-                Log::info('Exercise item assignment withdrawn', [
-                    'exercise_item_id' => $exerciseItemId,
-                    'student_id' => $studentId,
-                ]);
-            } elseif ($classId) {
-                // Class-level withdrawal - remove all students in the class
-                $studentIds = \App\Models\UserClass::where('users_classes.class_id', $classId)
-                    ->join('users', 'users_classes.user_id', '=', 'users.id')
-                    ->where('users.user_type_id', 3)  // 3 = student
-                    ->pluck('users_classes.user_id')
-                    ->toArray();
-
-                if (!empty($studentIds)) {
-                    \App\Models\AssignmentStudent::whereIn('exercise_assignment_id', $assignments)
-                        ->whereIn('student_id', $studentIds)
-                        ->delete();
-
-                    Log::info('Exercise item assignment withdrawn from class', [
-                        'exercise_item_id' => $exerciseItemId,
-                        'class_id' => $classId,
-                        'student_count' => count($studentIds),
-                    ]);
-                }
-            }
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Hủy giao bài tập con thành công'
-            ]);
+            return response()->json($result);
         } catch (\Exception $e) {
             Log::error('Error withdrawing exercise item: ' . $e->getMessage());
             return response()->json([

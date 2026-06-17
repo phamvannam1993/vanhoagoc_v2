@@ -1,28 +1,73 @@
 <script setup>
-import {Head, usePage} from '@inertiajs/vue3';
-import {SearchOutlined} from '@ant-design/icons-vue';
-import {ref, onMounted, nextTick, defineProps, computed} from 'vue';
-import {Link} from '@inertiajs/vue3';
-import {useToast} from 'vue-toastification';
-import { USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER } from "@/const.js";
-import SchoolLayout from "@/Layouts/SchoolLayout.vue";
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { SearchOutlined } from '@ant-design/icons-vue';
+import { ref, onMounted, computed } from 'vue';
+import { useToast } from 'vue-toastification';
+import { USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER } from '@/const.js';
+import SchoolLayout from '@/Layouts/SchoolLayout.vue';
 
 const props = defineProps({
     appId: {
-        type: String,
+        type: [String, Number],
+        default: '',
     },
 });
+
 const toast = useToast();
 const page = usePage();
+
 const user = page.props?.auth?.user;
 const query = page.props?.query || {};
-const app_id = ref(query?.app_id);
 const userType = user?.user_type?.type;
 
-if (userType === USER_TYPE_TEACHER) {
-    app_id.value = props.appId
-}
-const baseColumns  = [
+const isTeacher = userType === USER_TYPE_TEACHER;
+const isAdminOrDirector = userType === USER_TYPE_ADMIN || userType === USER_TYPE_DIRECTOR;
+
+const normalizeId = (input) => {
+    let value = input;
+
+    for (let i = 0; i < 5; i++) {
+        if (value && typeof value === 'object') {
+            value = value.value ?? value.id ?? null;
+        } else {
+            break;
+        }
+    }
+
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    return String(value);
+};
+
+const app_id = ref(isTeacher ? normalizeId(props.appId) : normalizeId(query?.app_id));
+
+const pagination = ref({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+});
+
+const data = ref([]);
+const apps = ref([]);
+const tableRef = ref(null);
+
+const formFilter = ref({
+    search: '',
+    app_id: app_id.value,
+});
+
+const fileImport = ref(null);
+const classIdImport = ref('');
+const appIdImport = ref('');
+const isUploading = ref(false);
+
+const currentAppId = computed(() => {
+    return normalizeId(formFilter.value.app_id) || normalizeId(app_id.value) || normalizeId(props.appId);
+});
+
+const baseColumns = [
     {
         title: 'STT',
         dataIndex: 'id',
@@ -30,7 +75,7 @@ const baseColumns  = [
         width: 80,
         align: 'center',
     },
-     {
+    {
         title: 'ID',
         dataIndex: 'id',
         key: 'db_id',
@@ -71,93 +116,107 @@ const baseColumns  = [
     },
 ];
 
-if (userType === USER_TYPE_TEACHER) {
-    baseColumns.splice(5, 0, { title: 'Giao bài', key: 'assign', dataIndex: 'assign' });
+if (isTeacher) {
+    baseColumns.splice(5, 0, {
+        title: 'Giao bài',
+        key: 'assign',
+        dataIndex: 'assign',
+    });
 }
+
 const columns = baseColumns;
 
-const pagination = ref({
-    current: 1,
-    pageSize: 10,
-    total: 0,
+const breadcrumbs = [
+    {
+        title: 'App',
+        url: route('admins.school.index'),
+    },
+    {
+        title: page.props?.app?.name || 'Class',
+        url: route('admins.class.index', {
+            app_id: page.props?.app?.id,
+        }),
+    },
+];
+
+onMounted(async () => {
+    if (isAdminOrDirector) {
+        await loadApps();
+    }
+
+    await loadData();
 });
-const data = ref([]);
-const apps = ref([]);
-const formFilter = ref({
-    search: '',
-    app_id: app_id.value
-});
-const tableRef = ref(null);
 
 const loadApps = async () => {
     try {
         const res = await axios.get(route('admins.class.apps'));
+
         if (res.data.status) {
-            apps.value = res.data.data.map(app => ({
-                value: app.id,
-                label: app.name
+            apps.value = (res.data.data || []).map(app => ({
+                value: String(app.id),
+                label: app.name,
             }));
 
-            // Nếu có app_id được chọn, convert thành label-in-value format
-            if (formFilter.value.app_id) {
-                const selectedApp = apps.value.find(a => a.value == formFilter.value.app_id);
+            const selectedId = normalizeId(formFilter.value.app_id);
+
+            if (selectedId) {
+                const selectedApp = apps.value.find(a => String(a.value) === selectedId);
+
                 if (selectedApp) {
-                    formFilter.value.app_id = {
-                        value: selectedApp.value,
-                        label: selectedApp.label
-                    };
+                    formFilter.value.app_id = String(selectedApp.value);
+                    app_id.value = String(selectedApp.value);
                 }
             }
         }
     } catch (error) {
         console.error('Error loading apps:', error);
+        toast.error('Không tải được danh sách App!');
     }
 };
 
-const selectedAppName = computed(() => {
-    if (!formFilter.value.app_id || apps.value.length === 0) {
-        return '';
-    }
-    // Fix ID mismatch - convert to string to compare
-    const appId = String(formFilter.value.app_id);
-    const selected = apps.value.find(a => String(a.value) === appId);
-    console.log('Debug:', { appId, apps: apps.value, selected });
-    return selected ? selected.label : '';
-});
-
-onMounted(async () => {
-    await loadApps();
-    await loadData();
-});
 const handleAppChange = (value) => {
-    // With label-in-value, value is {label: "...", value: ID}
-    if (value && typeof value === 'object') {
-        formFilter.value.app_id = value.value;
-    } else {
-        formFilter.value.app_id = value;
+    const selectedId = normalizeId(value);
+
+    formFilter.value.app_id = selectedId;
+    app_id.value = selectedId;
+
+    pagination.value.current = 1;
+    loadData();
+};
+
+const buildClassListUrl = () => {
+    const params = new URLSearchParams();
+
+    params.set('page', String(pagination.value.current));
+    params.set('search', formFilter.value.search || '');
+
+    const selectedAppId = normalizeId(formFilter.value.app_id);
+
+    if (selectedAppId) {
+        params.set('app_id', selectedAppId);
     }
-    onSearch();
+
+    return `${route('admins.class.json.list')}?${params.toString()}`;
 };
 
 const loadData = async () => {
-    // Teachers must have app_id, admins can view all
-    if (!formFilter.value.app_id && userType === USER_TYPE_TEACHER) {
+    const selectedAppId = normalizeId(formFilter.value.app_id);
+
+    if (!selectedAppId && isTeacher) {
         return;
     }
 
-    const params = {
-        page: pagination.value.current,
-        search: formFilter.value.search,
-        ...(formFilter.value.app_id && { app_id: formFilter.value.app_id })
-    };
-
     try {
-        const res = await axios.get(route('admins.class.json.list', params));
+        const url = buildClassListUrl();
+
+        console.log('URL class list:', url);
+
+        const res = await axios.get(url);
 
         if (res.data.status) {
             const responseData = res.data.data;
 
-            data.value = responseData.data.map((v) => {
+            data.value = (responseData.data || []).map((v) => {
                 const usersCount = v.users_count ?? 0;
                 const totalPoint = v.total_point ?? 0;
                 const practiceClass = v.practice_class ?? [];
@@ -173,7 +232,8 @@ const loadData = async () => {
                     menu: 'DS Nhân viên/Học sinh',
                     result: totalPoint > 0,
                     isAssign: practiceClass.length > 0,
-                    beauty_created_at: v.beauty_created_at
+                    beauty_created_at: v.beauty_created_at,
+                    status: v.status,
                 };
             });
 
@@ -186,74 +246,70 @@ const loadData = async () => {
         console.error(error);
     }
 };
+
 const onPageChange = (page) => {
     pagination.value.current = page;
     loadData();
 };
+
 const onSearch = () => {
+    pagination.value.current = 1;
     loadData();
 };
+
 const removeFilter = () => {
     formFilter.value.search = '';
+    pagination.value.current = 1;
     loadData();
 };
-const rowSelection = ref({
-    onChange: (selectedRowKeys, selectedRows) => {
-        console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
-    },
-    onSelect: (record, selected, selectedRows) => {
-        console.log(record, selected, selectedRows);
-    },
-    onSelectAll: (selected, selectedRows, changeRows) => {
-        console.log(selected, selectedRows, changeRows);
-    },
-});
-const fileImport = ref(null);
-const classIdImport = ref('');
-const appIdImport = ref('');
-const isUploading = ref(false);
-const triggerFileImport = (classId, appId) => {
+
+const triggerFileImport = (classId, recordAppId) => {
+    if (!fileImport.value) return;
+
     fileImport.value.value = '';
     classIdImport.value = classId;
-    appIdImport.value = appId;
+    appIdImport.value = normalizeId(recordAppId);
     fileImport.value.click();
 };
+
 const handleFileImport = async (event) => {
     const file = event.target.files[0];
+
     if (!file) return;
+
     isUploading.value = true;
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('app_id', appIdImport.value)
-    formData.append('class_id', classIdImport.value)
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('app_id', appIdImport.value);
+    formData.append('class_id', classIdImport.value);
 
     try {
-        axios
-            .post(route('admins.students.json.importStudent'), formData)
-            .then((response) => {
-                if (response.data.status) {
-                    toast.success('Import thành công!');
-                } else {
-                    toast.error('Import không thành công! Vui lòng xem lại format file!');
-                }
-            })
-            .catch((error) => {
-                toast.error(error);
-            });
+        const response = await axios.post(route('admins.students.json.importStudent'), formData);
+
+        if (response.data.status) {
+            toast.success('Import thành công!');
+            await loadData();
+        } else {
+            toast.error('Import không thành công! Vui lòng xem lại format file!');
+        }
     } catch (error) {
         console.error('Lỗi upload:', error);
+        toast.error('Import không thành công!');
     } finally {
         isUploading.value = false;
     }
 };
+
 const confirm = (value) => {
     axios
         .delete(route('admins.class.json.delete', { id: value }))
         .then((response) => {
             if (response.status === 200) {
                 toast.success('Xóa tài khoản Phòng ban/Lớp thành công');
-                setTimeout(function () {
-                    location.href = ''
+
+                setTimeout(() => {
+                    location.href = '';
                 }, 500);
             }
         })
@@ -261,173 +317,228 @@ const confirm = (value) => {
             toast.error('Đã có lỗi xảy ra, vui lòng thử lại sau!');
         });
 };
+
 const exportStudent = (classId) => {
     isUploading.value = true;
+
     axios({
-        url: route('admins.students.json.exportStudent', { class_id: classId }),
+        url: route('admins.students.json.exportStudent', {
+            class_id: classId,
+        }),
         method: 'GET',
         responseType: 'blob',
     })
         .then((response) => {
-            const blob = new Blob([response.data], { type: response.headers['content-type'] });
+            const blob = new Blob([response.data], {
+                type: response.headers['content-type'],
+            });
+
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
+
             link.href = url;
-            link.setAttribute('download', 'students.xlsx'); // Tên file tải về
+            link.setAttribute('download', 'students.xlsx');
+
             document.body.appendChild(link);
             link.click();
             link.remove();
+
+            window.URL.revokeObjectURL(url);
+
             toast.success('Export thành công!');
         })
         .catch((error) => {
+            console.error(error);
             toast.error('Export không thành công!');
         })
         .finally(() => {
             isUploading.value = false;
         });
 };
+
 const goBack = () => {
     window.location = route('admins.school.index');
 };
-
-const breadcrumbs = [
-    {'title': 'App', 'url': route('admins.school.index')},
-    {'title': page.props?.app?.name || 'Class', 'url': route('admins.class.index', {app_id: page.props?.app?.id})},
-]
 </script>
 
 <template>
-    <Head title="Class"/>
+    <Head title="Class" />
 
     <SchoolLayout :breadcrumbs="breadcrumbs">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Class</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+                Class
+            </h2>
         </template>
 
         <div class="app-page py-4">
             <div class="content-page mx-auto w-full md:w-11/12">
-                <h1 class="text-[30px] font-bold text-[#2C75E3]">Danh sách Phòng ban/Lớp</h1>
-                <a-button v-if="userType === USER_TYPE_ADMIN || userType === USER_TYPE_DIRECTOR" @click="goBack" class="custom-bg text-black mt-6" size="large">
+                <h1 class="text-[30px] font-bold text-[#2C75E3]">
+                    Danh sách Phòng ban/Lớp
+                </h1>
+
+                <a-button
+                    v-if="isAdminOrDirector"
+                    class="custom-bg text-black mt-6"
+                    size="large"
+                    @click="goBack"
+                >
                     Quay lại
                 </a-button>
 
                 <Link
-                    :href="route('admins.class.create', { app_id: app_id })"
-
-                    v-if="userType === USER_TYPE_ADMIN || userType === USER_TYPE_DIRECTOR"
+                    v-if="isAdminOrDirector"
+                    :href="route('admins.class.create', {
+                        app_id: currentAppId,
+                    })"
                 >
-                    <a-button class="mt-6 ml-5" type="primary">Thêm mới</a-button>
+                    <a-button class="mt-6 ml-5" type="primary">
+                        Thêm mới
+                    </a-button>
                 </Link>
+
                 <div class="filter-page mt-6 flex gap-10">
                     <a-select
-                        v-if="userType === USER_TYPE_ADMIN || userType === USER_TYPE_DIRECTOR"
+                        v-if="isAdminOrDirector"
                         v-model:value="formFilter.app_id"
                         placeholder="Chọn App"
                         style="width: 300px"
                         :options="apps"
                         allow-clear
-                        label-in-value
+                        show-search
+                        option-filter-prop="label"
+                        :label-in-value="false"
                         @change="handleAppChange"
                     />
+
                     <a-input
+                        v-model:value="formFilter.search"
                         placeholder="Tìm kiếm"
                         :allow-clear="true"
                         style="width: 30rem"
-                        v-model:value="formFilter.search"
+                        @pressEnter="onSearch"
                     >
-                        <!-- Sử dụng slot suffix để đặt icon -->
                         <template #suffix>
-                            <SearchOutlined @click="onSearch" style="cursor: pointer"/>
+                            <SearchOutlined
+                                style="cursor: pointer"
+                                @click="onSearch"
+                            />
                         </template>
                     </a-input>
-                    <a-button @click="removeFilter" size="large">Xóa lọc</a-button>
+
+                    <a-button size="large" @click="removeFilter">
+                        Xóa lọc
+                    </a-button>
                 </div>
+
+                <input
+                    ref="fileImport"
+                    type="file"
+                    class="hidden"
+                    accept=".xls,.xlsx,.csv"
+                    @change="handleFileImport"
+                />
+
                 <div class="mt-4">
                     <a-table
+                        ref="tableRef"
                         :columns="columns"
                         :data-source="data"
                         :pagination="false"
-                        ref="tableRef"
                         rowKey="id"
                         :scroll="{ x: 'max-content' }"
                     >
                         <template #bodyCell="{ column, record, index }">
                             <template v-if="column.key === 'id'">
-                                {{ index + 1 + pagination.pageSize * (pagination.current - 1) }}
+                                {{
+                                    index + 1 + pagination.pageSize * (pagination.current - 1)
+                                }}
                             </template>
+
                             <template v-if="column.key === 'name'">
                                 <div class="flex gap-2">
                                     <p
                                         :class="`flex items-center font-bold ${record.status === 'off' ? 'hide-class' : ''}`"
                                     >
-                                    <Link :href=" route('admins.students.index', {class_id: record.id,app_id: record.app_id})">
-                                        {{ record.name }}
-                                        ({{ record.users_count }})
-                                    </Link>
+                                        <Link
+                                            :href="route('admins.students.index', {
+                                                class_id: record.id,
+                                                app_id: record.app_id,
+                                            })"
+                                        >
+                                            {{ record.name }} ({{ record.users_count }})
+                                        </Link>
                                     </p>
                                 </div>
                             </template>
+
                             <template v-if="column.key === 'menu'">
                                 <Link
-                                    :href="
-                                        route('admins.students.create', {
-                                          app_id: record.app_id,
-                                        })
-                                      "
                                     v-if="!record.has_student"
+                                    :href="route('admins.students.create', {
+                                        app_id: record.app_id,
+                                    })"
                                 >
                                     <a-button
                                         :class="`bg-[#b1b1b1] text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         size="large"
-                                    >{{ record.menu }}
+                                    >
+                                        {{ record.menu }}
                                     </a-button>
                                 </Link>
+
                                 <Link
-                                    :href="
-                                        route('admins.students.index', {
-                                          class_id: record.id,app_id: record.app_id
-                                        })
-                                    "
                                     v-else
+                                    :href="route('admins.students.index', {
+                                        class_id: record.id,
+                                        app_id: record.app_id,
+                                    })"
                                 >
                                     <a-button
                                         :class="`text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         size="large"
                                         type="primary"
-                                    >{{ record.menu }}
-
-                                    ({{ record.users_count }})
+                                    >
+                                        {{ record.menu }} ({{ record.users_count }})
                                     </a-button>
                                 </Link>
                             </template>
+
                             <template v-if="column.key === 'import'">
                                 <div class="flex gap-4 text-center">
-                                    <input type="file" class="hidden" ref="fileImport"
-                                           @change="handleFileImport" accept=".xls,.xlsx,.csv" />
                                     <a-button
-                                        @click="triggerFileImport(record.id, record.app_id)"
                                         :class="`text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         :type="record.has_student ? 'primary' : undefined"
                                         :style="!record.has_student ? 'background:#b1b1b1' : ''"
                                         size="large"
-                                    >Nhập DS
+                                        @click="triggerFileImport(record.id, record.app_id)"
+                                    >
+                                        Nhập DS
                                     </a-button>
                                 </div>
                             </template>
+
                             <template v-if="column.key === 'export'">
                                 <div class="flex gap-4 text-center">
                                     <a-button
-                                        @click="exportStudent(record.id)"
                                         :class="`text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         :type="record.has_student ? 'primary' : undefined"
                                         :style="!record.has_student ? 'background:#b1b1b1' : ''"
                                         size="large"
-                                    >Xuất DS
+                                        @click="exportStudent(record.id)"
+                                    >
+                                        Xuất DS
                                     </a-button>
                                 </div>
                             </template>
+
                             <template v-if="column.key === 'assign'">
-                                <Link  v-if="!record.isAssign" :href="route('admins.practices.index', { class_id: record.id })">
+                                <Link
+                                    v-if="!record.isAssign"
+                                    :href="route('admins.practices.index', {
+                                        class_id: record.id,
+                                    })"
+                                >
                                     <a-button
                                         :class="`bg-[#b1b1b1] text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         size="large"
@@ -436,15 +547,22 @@ const breadcrumbs = [
                                     </a-button>
                                 </Link>
 
-                                <Link v-else :href="route('admins.class.assignment', { class_id: record.id })">
+                                <Link
+                                    v-else
+                                    :href="route('admins.class.assignment', {
+                                        class_id: record.id,
+                                    })"
+                                >
                                     <a-button
                                         :class="`text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         size="large"
                                         type="primary"
-                                    >Đã giao
+                                    >
+                                        Đã giao
                                     </a-button>
                                 </Link>
                             </template>
+
                             <template v-if="column.key === 'result'">
                                 <a-button
                                     v-if="!record.is_result"
@@ -454,50 +572,66 @@ const breadcrumbs = [
                                 >
                                     Chưa có kết quả
                                 </a-button>
-                                <Link v-else :href="route('admins.class.resultLearn', { class_id: record.id })">
+
+                                <Link
+                                    v-else
+                                    :href="route('admins.class.resultLearn', {
+                                        class_id: record.id,
+                                    })"
+                                >
                                     <a-button
                                         :class="`text-white ${record.status === 'off' ? 'hide-class' : ''}`"
                                         size="large"
                                         type="primary"
-                                    >Xem kết quả
+                                    >
+                                        Xem kết quả
                                     </a-button>
                                 </Link>
                             </template>
+
                             <template v-else-if="column.key === 'action'">
                                 <div
                                     :class="`cursor-pointer flex gap-4 text-[15px] font-semibold ${record.status === 'off' ? 'hide-class' : ''}`"
                                 >
                                     <Link
-                                        :href="
-                                            route('admins.class.edit', {
-                                              app_id: record.app_id,
-                                              id: record.id,
-                                            })
-                                          "
-                                    >Sửa</Link
+                                        :href="route('admins.class.edit', {
+                                            app_id: record.app_id,
+                                            id: record.id,
+                                        })"
                                     >
-                                      <a-popconfirm
-                                            placement="topRight"
-                                            ok-text="Xóa"
-                                            cancel-text="Bỏ qua"
-                                            @confirm="confirm(record.id)"
-                                        >
-                                            <template #title>
-                                                <p>Bạn có chắc chắn muốn xoá?</p>
-                                            </template>
-                                            Xóa
-                                        </a-popconfirm>
+                                        Sửa
+                                    </Link>
+
+                                    <a-popconfirm
+                                        placement="topRight"
+                                        ok-text="Xóa"
+                                        cancel-text="Bỏ qua"
+                                        @confirm="confirm(record.id)"
+                                    >
+                                        <template #title>
+                                            <p>Bạn có chắc chắn muốn xoá?</p>
+                                        </template>
+
+                                        Xóa
+                                    </a-popconfirm>
                                 </div>
                             </template>
                         </template>
+
                         <template #footer>
                             <div class="flex items-center justify-end">
-                                <!-- Pagination -->
-                                <a-pagination v-bind="pagination" @change="onPageChange"/>
-                                <!-- Icon plus -->
-                                <Link :href="route('admins.class.create', { app_id: app_id })">
+                                <a-pagination
+                                    v-bind="pagination"
+                                    @change="onPageChange"
+                                />
+
+                                <Link
+                                    :href="route('admins.class.create', {
+                                        app_id: currentAppId,
+                                    })"
+                                >
                                     <img
-                                        v-if="userType === USER_TYPE_ADMIN || userType === USER_TYPE_DIRECTOR || userType === USER_TYPE_TEACHER"
+                                        v-if="isAdminOrDirector || isTeacher"
                                         class="cursor-pointer"
                                         src="/images/icon-plus.png"
                                         alt="icon-plus"
@@ -509,6 +643,7 @@ const breadcrumbs = [
                 </div>
             </div>
         </div>
+
         <a-modal
             v-model:open="isUploading"
             centered
@@ -518,11 +653,14 @@ const breadcrumbs = [
         >
             <div class="flex flex-col items-center justify-center p-4">
                 <a-spin size="large" />
-                <p class="mt-4 text-lg font-medium">Đang tải lên...</p>
+                <p class="mt-4 text-lg font-medium">
+                    Đang tải lên...
+                </p>
             </div>
         </a-modal>
     </SchoolLayout>
 </template>
+
 <style lang="scss">
 .ant-select-selector,
 .ant-input-affix-wrapper {
@@ -537,6 +675,7 @@ const breadcrumbs = [
 .grey-row {
     background-color: darkgray;
 }
+
 .text-name {
     float: right;
     font-size: 20px;
