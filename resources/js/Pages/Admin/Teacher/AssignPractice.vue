@@ -365,6 +365,9 @@ onMounted(async () => {
 });
 const loadData = async () => {
     try {
+        // Clear assigned items when reloading data
+        assignedItems.value.clear();
+
         const params = {
             page: pagination.value.current,
             search: formFilter.value.search,
@@ -428,6 +431,55 @@ const loadData = async () => {
         pagination.value.current = res.data.data.current_page;
 
         console.log('Data loaded, booksData:', booksData);
+
+        // Preload exercise items for practices that have assignments
+        const practicesToLoad = [];
+        booksData.forEach(book => {
+            book.children?.forEach(week => {
+                week.children?.forEach(practice => {
+                    if (practice.assign) {  // Only load for practices with assignments
+                        practicesToLoad.push(practice);
+                    }
+                });
+            });
+        });
+
+        // Load exercise items for assigned practices
+        for (const practice of practicesToLoad) {
+            try {
+                const itemRes = await axios.get(route('admins.practices.json.getExerciseItems'), {
+                    params: { practice_id: practice.id, student_id: student_id }
+                });
+
+                if (itemRes.data.status && itemRes.data.data?.length > 0) {
+                    const hasAssignmentInPractice = itemRes.data.data.some(item => item.is_assigned);
+
+                    practice.children = itemRes.data.data.map((item) => {
+                        if (item.is_assigned) {
+                            assignedItems.value.add(item.id);
+                        }
+                        return {
+                            key: `exercise-item-${item.id}`,
+                            id: item.id,
+                            name: item.name,
+                            level: item.level,
+                            total_questions: item.total_questions,
+                            level_type: "exercise-item",
+                            practice_id: practice.id,
+                            week_id: practice.week_id,
+                            book_id: practice.book_id,
+                            is_assigned: item.is_assigned || false,
+                            disabled_in_practice: hasAssignmentInPractice && !item.is_assigned
+                        };
+                    });
+                }
+            } catch (err) {
+                console.error('Error preloading items for practice:', practice.id, err);
+            }
+        }
+
+        // Trigger final reactive update
+        data.value = [...data.value];
     } catch (err) {
         console.error('Error in loadData:', err);
         toast.error('Lỗi tải dữ liệu: ' + (err.response?.data?.message || err.message));
