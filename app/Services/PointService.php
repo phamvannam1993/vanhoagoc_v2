@@ -447,9 +447,16 @@ class PointService
         }
 
         foreach($practiceData as $item) {
+            // Skip items without practice relationship
+            if (!$item->practice) {
+                continue;
+            }
+
             $week = Week::where('id',  $item->practice->week_id)->first();
             $weekName = $week ? $week->name : 'Unknown Week';
-            $item->name = $item->book->title.' - '.$weekName.' - '. $item->practice->name;
+            $bookTitle = data_get($item, 'book.title', 'Unknown Book');
+            $practiceName = data_get($item, 'practice.name', 'Unknown Practice');
+            $item->name = $bookTitle.' - '.$weekName.' - '. $practiceName;
             $item->point_text = "";
             $item->duration = "";
             if($item->from) {
