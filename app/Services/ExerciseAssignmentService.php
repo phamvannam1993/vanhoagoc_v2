@@ -103,7 +103,7 @@ class ExerciseAssignmentService
         foreach ($itemIds as $itemId) {
             ExerciseAssignment::create([
                 'exercise_item_id' => $itemId,
-                'class_code' => "class_$classId",
+                'class_id' => $classId,
                 'due_date' => $fromDate,
                 'note' => $data['checkedNonTime'] ? "Vô thời hạn" : "",
                 'status' => 'active',
@@ -158,7 +158,7 @@ class ExerciseAssignmentService
     {
         // Find and delete class assignment
         $deleted = ExerciseAssignment::where('exercise_item_id', $exerciseItemId)
-            ->where('class_code', "class_$classId")
+            ->where('class_id', $classId)
             ->delete();
 
         if ($deleted === 0) {
