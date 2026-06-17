@@ -250,25 +250,6 @@ class PracticeController extends Controller
         }
     }
 
-    public function withDrawPractice(Request $request)
-    {
-        $user = Auth::user();
-        $practiceId = $request->practice_id;
-        $classId = $request->class_id;
-        $studentId = $request->student_id ?? null;
-        $result = $this->practiceClassService->deleteById($user->id, $practiceId, $classId, $studentId);
-
-        if ($result) {
-            return response()->json([
-                'status' => true,
-            ]);
-        }
-
-        return response()->json([
-            'status' => false,
-        ]);
-    }
-
     public function withdrawExerciseItem(Request $request, ExerciseAssignmentService $assignmentService)
     {
         try {

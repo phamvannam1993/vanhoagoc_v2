@@ -86,10 +86,22 @@ const columns = [
                 );
             }
 
-            // For practices - don't show button (only show for exercise items)
-            // User should expand practice to see and assign exercise items
+            // For practices - show assigned/not-assigned image
             if (record.level === "practice") {
-                return null;
+                const imageSrc = record.assign ? "/images/Teacher/assigned.png" : "/images/Teacher/not_assigned.png";
+                return h(
+                    "img",
+                    {
+                        src: imageSrc,
+                        alt: record.assign ? "Đã giao" : "Giao bài",
+                        style: {
+                            cursor: "pointer",
+                            width: "70px",
+                            height: "38px",
+                        },
+                        onClick: () => handleAssign(record)
+                    }
+                );
             }
 
             return null;
