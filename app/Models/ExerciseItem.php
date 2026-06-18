@@ -22,6 +22,11 @@ class ExerciseItem extends Model
         return $this->belongsTo(Exercise::class);
     }
 
+    public function practice(): BelongsTo
+    {
+        return $this->belongsTo(Practice::class);
+    }
+
     public function questions(): HasMany
     {
         return $this->hasMany(ExerciseQuestion::class)->orderBy('order');
