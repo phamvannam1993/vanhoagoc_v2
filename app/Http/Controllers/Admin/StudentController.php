@@ -683,9 +683,19 @@ class StudentController extends Controller
                             $isLessonDocText = $practice->lesson_doc && !preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $practice->lesson_doc);
                             $isLessonDoc2Text = $practice->lesson_doc2 && !preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $practice->lesson_doc2);
 
+                            // Get parent practice info
+                            $parentPractice = $item->practice;
+
                             $practicesArray[] = [
-                                'practice_id' => $exerciseItem->id,
-                                'practice_id_tool' => $exerciseItem->id,
+                                // Practice (bài cha) info
+                                'practice_id' => $mapped['practice_id'], // bài cha format string
+                                'practice_id_tool' => $mapped['practice_id_tool'], // id bài cha
+                                'time' => $mapped['time'], // time from practice assignment
+                                'timeout' => $mapped['timeout'], // timeout from practice assignment
+
+                                // Exercise item (bài con) info
+                                'exercise_id' => $exerciseItem->id,
+                                'exercise_name' => $exerciseItem->name,
                                 'cover_image' => $practice->img ? \App\Helpers\Helper::getCloudFront($practice->img) : '',
                                 'name' => $exerciseItem->name,
                                 'status' => $practice->status ?? 'on',
