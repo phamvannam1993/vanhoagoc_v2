@@ -651,7 +651,24 @@ class StudentController extends Controller
                 ->select('id', 'practice_id', 'book_id', 'week_id', 'from', 'to', 'student_id')
                 ->get();
 
-            $mapItem = function($item) use ($exerciseItemsByPractice) {
+            // Basic map function for week_unlock_struct (no practices array)
+            $mapItemBasic = function($item) {
+                return [
+                    'practice_id'      => ($item->book?->bo_sach ?? '') . '.' . ($item->book?->lop ?? '') . '.' . ($item->book?->name ?? '') . '.quyen1.' . ($item->week?->week_id ?? 0) . '.' . ($item->practice?->practice_id ?? 0),
+                    'time'             => Carbon::parse($item->from)->timestamp,
+                    'timeout'          => Carbon::parse($item->to)->timestamp,
+                    'practice_id_tool' => $item->practice_id,
+                ];
+            };
+
+            // week_unlock_struct: class-level assignments (student_id is null)
+            $data['week_unlock_struct'] = $allPractices
+                ->filter(fn($item) => is_null($item->student_id))
+                ->map($mapItemBasic)
+                ->values();
+
+            // Extended map function for week_unlock_struct_personal (with practices array)
+            $mapItemWithPractices = function($item) use ($exerciseItemsByPractice) {
                 $practiceId = $item->practice_id;
                 $mapped = [
                     'practice_id'      => ($item->book?->bo_sach ?? '') . '.' . ($item->book?->lop ?? '') . '.' . ($item->book?->name ?? '') . '.quyen1.' . ($item->week?->week_id ?? 0) . '.' . ($item->practice?->practice_id ?? 0),
@@ -683,15 +700,12 @@ class StudentController extends Controller
                             $isLessonDocText = $practice->lesson_doc && !preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $practice->lesson_doc);
                             $isLessonDoc2Text = $practice->lesson_doc2 && !preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $practice->lesson_doc2);
 
-                            // Get parent practice info
-                            $parentPractice = $item->practice;
-
                             $practicesArray[] = [
                                 // Practice (bài cha) info
-                                'practice_id' => $mapped['practice_id'], // bài cha format string
-                                'practice_id_tool' => $mapped['practice_id_tool'], // id bài cha
-                                'time' => $mapped['time'], // time from practice assignment
-                                'timeout' => $mapped['timeout'], // timeout from practice assignment
+                                'practice_id' => $mapped['practice_id'],
+                                'practice_id_tool' => $mapped['practice_id_tool'],
+                                'time' => $mapped['time'],
+                                'timeout' => $mapped['timeout'],
 
                                 // Exercise item (bài con) info
                                 'exercise_id' => $exerciseItem->id,
@@ -725,19 +739,13 @@ class StudentController extends Controller
                 return $mapped;
             };
 
-            // week_unlock_struct: class-level assignments (student_id is null)
-            $data['week_unlock_struct'] = $allPractices
-                ->filter(fn($item) => is_null($item->student_id))
-                ->map($mapItem)
-                ->values();
-
             // week_unlock_struct_personal: personal exercise item assignments (from new system)
             // Include all practices that have exercise item assignments for this student
             $personalPracticeIds = array_keys($exerciseItemsByPractice);
 
             $data['week_unlock_struct_personal'] = $allPractices
                 ->filter(fn($item) => in_array($item->practice_id, $personalPracticeIds))
-                ->map($mapItem)
+                ->map($mapItemWithPractices)
                 ->values();
         }
 
