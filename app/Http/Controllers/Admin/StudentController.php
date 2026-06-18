@@ -739,11 +739,16 @@ class StudentController extends Controller
                 return $mapped;
             };
 
-            // week_unlock_struct_personal: personal exercise item assignments (from new system)
-            // Include all practices that have exercise item assignments for this student
+            // week_unlock_struct_personal: personal assignments (no practices array)
             $personalPracticeIds = array_keys($exerciseItemsByPractice);
 
             $data['week_unlock_struct_personal'] = $allPractices
+                ->filter(fn($item) => in_array($item->practice_id, $personalPracticeIds))
+                ->map($mapItemBasic)
+                ->values();
+
+            // week_unlock_struct_personal_bew: personal assignments WITH practices array (exercise items)
+            $data['week_unlock_struct_personal_bew'] = $allPractices
                 ->filter(fn($item) => in_array($item->practice_id, $personalPracticeIds))
                 ->map($mapItemWithPractices)
                 ->values();
