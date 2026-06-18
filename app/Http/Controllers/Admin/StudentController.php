@@ -592,6 +592,130 @@ class StudentController extends Controller
         return Excel::download(new UsersExport($classId), 'students.xlsx');
     }
 
+    private function formatQuestionEditors($exerciseItem, $practiceItem)
+    {
+        $questions = QuestionEditor::where('exercise_item_id', $exerciseItem->id)
+            ->with(['templateQuestion', 'competency', 'competencyComponent', 'educationalContent'])
+            ->orderBy('sort_number', 'ASC')
+            ->get();
+
+        $questionData = [];
+        $bookIdString = ($practiceItem->book?->bo_sach ?? '') . '.' . ($practiceItem->book?->lop ?? '') . '.' . ($practiceItem->book?->name ?? '') . '.quyen1';
+
+        foreach ($questions as $question) {
+            $template = $question->templateQuestion;
+
+            // Process answers
+            $answerData = [];
+            $rightAnswer = [];
+            $answers = $question->answers;
+            foreach ($answers as $i => $answer) {
+                $type = $answer['type'];
+                $value = $answer['value'];
+
+                $answerData[] = [
+                    'type' => $type,
+                    'A' => $question->getRealAnswer($type, $value),
+                    'text' => $answer['answer_text'] ?? ''
+                ];
+
+                switch ($template->type) {
+                    case 'game_keo':
+                        $rightAnswer[] = $answer['inputNumber'];
+                        break;
+                    case 'game_chon':
+                        if (!empty($answer['checked'])) {
+                            $rightAnswer[] = "" . $i;
+                        }
+                        break;
+                    default:
+                        if ($template->type !== 'game_chon') {
+                            $rightAnswer[] = $answer['inputNumber'];
+                        }
+                        break;
+                }
+            }
+
+            // Process answer connects
+            $answerConnectData = [];
+            $answerConnects = $question->answer_connects;
+            foreach ($answerConnects as $answerConnect) {
+                $type = $answerConnect['type'];
+                $value = $answerConnect['value'];
+                $answerConnectData[] = [
+                    'type' => $type,
+                    'A' => $question->getRealAnswerConnect($type, $value),
+                    'text' => $answerConnect['answer_text'] ?? ''
+                ];
+                $rightAnswer[] = $answerConnect['inputNumber'] ?? '';
+            }
+
+            // Format pcnl and ndgd
+            $pcnlParts = array_filter([
+                optional($question->competency)->code,
+                optional($question->competencyComponent)->code,
+                $question->pcnl_detail,
+            ]);
+            $pcnlFormatted = implode('.', $pcnlParts) ?: $question->pcnl;
+
+            $ndgdParts = array_filter([
+                optional($question->educationalContent)->code,
+                $question->ndgd_requirement,
+            ]);
+            $ndgdFormatted = implode('.', $ndgdParts) ?: $question->ndgd;
+
+            // URLs
+            $urlImgQuestionBackground = \App\Helpers\Helper::getCloudFront($question->background);
+            $urlImgReadingVal = [
+                'urlimg' => $question->reading_val ? \App\Helpers\Helper::getCloudFront($question->reading_val) : '',
+                'text' => $question->reading_doc ?? '',
+            ];
+            $urlAudioVal = \App\Helpers\Helper::getCloudFront($question->audio_val);
+            $urlAudioQuesVal = \App\Helpers\Helper::getCloudFront($question->audio_ques_val);
+            $urlVideoS = \App\Helpers\Helper::getCloudFront($question->video_val);
+            $link = "https://vanhoagoc.com.vn/questionEditors/edit-game?app_id={$practiceItem->book->app_id}&book_id={$question->book_id}&id={$question->id}&practice_id={$question->practice_id}&template_id={$question->template}&week_id={$question->week_id}";
+
+            $questionData[] = [
+                'tem_playable_id' => $bookIdString . '.' . ($practiceItem->week?->week_id ?? 0) . '.' . ($exerciseItem->practice?->practice_id ?? 0) . '.' . $question->tem_playable_id,
+                'playable' => $template->playable ?? '',
+                'question_id' => $question->id,
+                'pcnl' => $pcnlFormatted,
+                'ndgd' => $ndgdFormatted,
+                'question_video_url' => \App\Helpers\Helper::getCloudFront($question->question_video_url),
+                'is_multi_result' => $question->is_multi_result,
+                'questiondata' => [
+                    'background' => $urlImgQuestionBackground,
+                    'question' => [
+                        'type' => $question->question_type,
+                        'Q' => \App\Helpers\MediaHelper::getCorrectQuestionByType($question->question_type, $question->question_val),
+                    ],
+                    'answers' => $answerData,
+                    'answers_array' => json_decode($question->answer_array),
+                    'answers_2' => [],
+                    'answer_2_array' => json_decode($question->answer_2_array),
+                    'answer_3_array' => json_decode($question->answer_3_array),
+                    'question_2' => [],
+                    'question_array' => json_decode($question->question_array),
+                    'answers_connect' => $answerConnectData,
+                    'urldoc' => $urlImgReadingVal,
+                    'clicks' => false,
+                    'title' => $question->title,
+                    'obj' => json_decode($question->obj),
+                    'reading' => '',
+                    'number_image_cut' => $question->number_image_cut,
+                    'audioTitle' => $urlAudioVal,
+                    'audioQuestion' => $urlAudioQuesVal,
+                    'video' => $urlVideoS,
+                    'right_answer' => $rightAnswer,
+                    'right_answer_array' => json_decode($question->right_answer_array),
+                    'link' => $link
+                ]
+            ];
+        }
+
+        return $questionData;
+    }
+
     public function getUserPractice(Request $request)
     {
         $studentId = $request->user_id ?? null;
@@ -728,7 +852,7 @@ class StudentController extends Controller
                                     'is_lesson_doc2_text' => $isLessonDoc2Text,
                                     'taptrung' => ($practice->taptrung ?? 'false') === 'true',
                                 ],
-                                'tem_playables' => []
+                                'tem_playables' => $this->formatQuestionEditors($exerciseItem, $item)
                             ];
                         }
                     }
