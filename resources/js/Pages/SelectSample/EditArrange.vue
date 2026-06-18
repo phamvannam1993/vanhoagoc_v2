@@ -1049,7 +1049,7 @@ const getAnswerMaxLength = () => {
                         ></div>
                         <input
                           v-model="item.inputNumber"
-                          :class="`h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5] ${item.image_answer_show ? 'mt-[8px]' : ''}`"
+                          :class="`h-[40px] w-[50px] rounded-md border-2 border-solid border-[#E5E5E5] ${item.image_answer_show ? 'mt-[8px]' : ''}`"
                         />
                       </div>
                       <input

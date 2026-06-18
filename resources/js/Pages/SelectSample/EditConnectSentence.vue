@@ -1232,7 +1232,7 @@ const goBack = () => {
                                                     <div class="mt-1 flex w-3/4 items-center gap-4">
                                                         <input
                                                             v-model="item.inputNumber"
-                                                            class="h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5]"
+                                                            class="h-[40px] w-[50px] rounded-md border-2 border-solid border-[#E5E5E5]"
                                                         />
                                                         <a-textarea
                                                             v-if="
@@ -1437,7 +1437,7 @@ const goBack = () => {
                                                     <div class="mt-1 flex w-3/4 items-center gap-4">
                                                         <input
                                                             v-model="item.inputNumber"
-                                                            class="h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5]"
+                                                            class="h-[40px] w-[50px] rounded-md border-2 border-solid border-[#E5E5E5]"
                                                         />
                                                         <a-textarea
                                                             v-if="

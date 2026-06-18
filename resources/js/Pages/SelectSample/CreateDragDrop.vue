@@ -877,7 +877,7 @@ const getAnswerMaxLength = () => {
                         <div class="flex gap-4 items-center">
                           <input
                             v-model="item.inputNumber"
-                            class="h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5]"
+                            class="h-[40px] w-[50px] rounded-md border-2 border-solid border-[#E5E5E5]"
                           />
                             <a-button
                                 v-if="infoTemplate.add_answer === 1"

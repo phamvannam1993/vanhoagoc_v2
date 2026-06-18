@@ -21,6 +21,7 @@ use App\Models\PracticeClass;
 use App\Models\User;
 use App\Models\Point;
 use App\Models\UserType;
+use App\Models\ExerciseItem;
 use App\Services\Admin\Class\ClassService;
 use App\Services\AppService;
 use App\Services\RoleService;
@@ -680,7 +681,58 @@ class StudentController extends Controller
             $data['week_unlock_struct_personal'] = $allPractices
                 ->filter(fn($item) => in_array($item->practice_id, $personalPracticeIds))
                 ->map($mapItem)
-                ->values();                  
+                ->values();
+
+            // Get exercise items for practices array
+            if (!empty($exerciseItemsByPractice)) {
+                $exerciseItems = ExerciseItem::whereIn('id', array_merge(...array_values($exerciseItemsByPractice)))
+                    ->with(['practice' => fn($q) => $q->select('id', 'practice_id', 'name', 'img', 'status', 'lesson_video', 'lesson_noi', 'lesson_doc', 'lesson_doc2', 'pdf', 'avatar', 'setting_advance')])
+                    ->select('id', 'name', 'practice_id', 'level', 'order')
+                    ->get();
+
+                $practicesArray = [];
+                foreach ($exerciseItems as $exerciseItem) {
+                    $practice = $exerciseItem->practice;
+
+                    if ($practice) {
+                        // Parse setting_advance for background and colors
+                        $settingAdvance = $practice->setting_advance ? json_decode($practice->setting_advance, true) : null;
+                        $background = $settingAdvance ? json_decode($settingAdvance['background'] ?? null) : null;
+                        $colorNotPractice = $settingAdvance ? json_decode($settingAdvance['color_not_practice'] ?? null) : null;
+                        $colorDonePractice = $settingAdvance ? json_decode($settingAdvance['color_done_practice'] ?? null) : null;
+
+                        // Check if lesson_doc is text
+                        $isLessonDocText = $practice->lesson_doc && !preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $practice->lesson_doc);
+                        $isLessonDoc2Text = $practice->lesson_doc2 && !preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $practice->lesson_doc2);
+
+                        $practicesArray[] = [
+                            'practice_id' => $exerciseItem->id, // ID bài tập con
+                            'practice_id_tool' => $exerciseItem->id,
+                            'cover_image' => $practice->img ? \App\Helpers\Helper::getCloudFront($practice->img) : '',
+                            'name' => $exerciseItem->name, // Tên bài tập con
+                            'status' => $practice->status ?? 'on',
+                            'lessons' => [
+                                'lesson_video' => $practice->lesson_video ? \App\Helpers\MediaHelper::getCorrectValueByType('video', $practice->lesson_video) : '',
+                                'lesson_noi' => $practice->lesson_noi ? \App\Helpers\MediaHelper::getCorrectValueByType('audio', $practice->lesson_noi) : '',
+                                'lesson_doc' => $practice->lesson_doc ?? '',
+                                'lesson_doc2' => $practice->lesson_doc2 ?? '',
+                                'lesson_vr' => '',
+                                'lesson_pdf' => $practice->pdf ? \App\Helpers\Helper::getCloudFront($practice->pdf) : null,
+                                'avatar' => $practice->avatar ? \App\Helpers\Helper::getCloudFront($practice->avatar) : null,
+                                'background' => $background,
+                                'color_not_practice' => $colorNotPractice,
+                                'color_done_practice' => $colorDonePractice,
+                                'is_lesson_doc_text' => $isLessonDocText,
+                                'is_lesson_doc2_text' => $isLessonDoc2Text,
+                                'taptrung' => ($practice->taptrung ?? 'false') === 'true',
+                            ],
+                            'tem_playables' => [] // Questions array (empty for now)
+                        ];
+                    }
+                }
+
+                $data['practices'] = $practicesArray;
+            }
         }
 
         return response()->json([

@@ -87,7 +87,7 @@ const handleClose = () => {
                 </div>
                 <div class="justify-items-center">
                     <div
-                        class="h-[40px] w-[40px] text-[18px] rounded-md border-2 border-solid border-[#E5E5E5] flex justify-center items-center"
+                        class="h-[40px] w-[50px] text-[18px] rounded-md border-2 border-solid border-[#E5E5E5] flex justify-center items-center"
                     >
                         {{ item.inputNumber }}
                     </div>

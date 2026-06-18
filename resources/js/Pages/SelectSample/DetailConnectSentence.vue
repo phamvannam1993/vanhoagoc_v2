@@ -194,7 +194,7 @@ const showPreview = () => {
                                                         v-model="
                                                             item.inputNumber
                                                         "
-                                                        class="h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5]"
+                                                        class="h-[40px] w-[50px] rounded-md border-2 border-solid border-[#E5E5E5]"
                                                         disabled
                                                     />
                                                     <a-input
@@ -236,7 +236,7 @@ const showPreview = () => {
                                                             item.inputNumber
                                                         "
                                                         disabled
-                                                        class="h-[40px] w-[40px] rounded-md border-2 border-solid border-[#E5E5E5]"
+                                                        class="h-[40px] w-[50px] rounded-md border-2 border-solid border-[#E5E5E5]"
                                                     />
                                                     <a-input
                                                         :placeholder="`Câu trả lời ${index + 1}`"
