@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Models\Point;
 use App\Models\UserType;
 use App\Models\ExerciseItem;
+use App\Models\QuestionEditor;
 use App\Services\Admin\Class\ClassService;
 use App\Services\AppService;
 use App\Services\RoleService;
