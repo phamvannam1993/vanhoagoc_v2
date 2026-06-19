@@ -244,6 +244,7 @@ class PointService
             'user_id' => $request['user_id'],
             'class_id' => $request['class_id'] ?? null,
             'practice_id' => isset($request['practice_id_tool']) ? $request['practice_id_tool'] : '',
+            'exercise_id' => isset($request['exercise_id']) ? $request['exercise_id'] : '',
             'name' => $request['name'],
             'screen_shot' => isset($request['screen_shot']) ? $request['screen_shot'] : '',
             'namevideo' =>  isset($request['namevideo']) ? $request['namevideo'] : '',
