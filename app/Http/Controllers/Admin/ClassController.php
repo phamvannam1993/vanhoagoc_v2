@@ -161,18 +161,26 @@ class ClassController extends Controller
             }
         } else {
             $user_id = $request->user_id;
+
+            if (!$user_id) {
+                return redirect()->route('admins.class.index')->with('error', 'Thiếu user_id');
+            }
+
             $user = User::where('id', $user_id)->first();
             if (!$user) {
-                return redirect()->back()->with('error', 'Không tìm thấy học sinh');
+                return redirect()->route('admins.class.index')->with('error', "Học sinh ID {$user_id} không tồn tại");
             }
+
             $userClass = \App\Models\UserClass::where('user_id', $user_id)->first();
             if (!$userClass) {
-                return redirect()->back()->with('error', 'Học sinh chưa được xếp vào lớp nào');
+                return redirect()->route('admins.class.index')->with('error', "Học sinh {$user->name} chưa được xếp vào lớp nào");
             }
+
             $classDetail = Classes::where('id', $userClass->class_id)->first();
             if (!$classDetail) {
-                return redirect()->back()->with('error', 'Không tìm thấy lớp');
+                return redirect()->route('admins.class.index')->with('error', 'Không tìm thấy lớp của học sinh');
             }
+
             $appDetail = App::where('id', $classDetail->app_id)->first();
             if (!empty($appDetail)) {
                 $name_app = $appDetail->name . ' / ' . $classDetail->name;
@@ -184,7 +192,7 @@ class ClassController extends Controller
             'query' => $request->query(),
             'name_app' => $name_app,
             'name' => $name,
-            'app_id' => $classDetail->app_id
+            'app_id' => $classDetail->app_id ?? null
         ]);
     }
 
