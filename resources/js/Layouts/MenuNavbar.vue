@@ -262,7 +262,7 @@ const requestAccess = (item) => {
     loginError.value = '';
 };
 
-const submitLogin = async () => {
+const submitLogin = () => {
     if (!loginForm.value.email || !loginForm.value.password) {
         loginError.value = 'Vui lòng nhập tên tài khoản và mật khẩu';
         return;
@@ -271,21 +271,18 @@ const submitLogin = async () => {
     loginLoading.value = true;
     loginError.value = '';
 
-    try {
-        const response = await axios.post(route('login'), {
-            email: loginForm.value.email,
-            password: loginForm.value.password,
-            intended: lockItem.value?.link
-        });
-
-        // Nếu login thành công, server redirect tới intended URL
-        // Nhưng vì axios sẽ follow redirect, ta cần check response status
-        window.location.href = lockItem.value?.link || '/';
-    } catch (error) {
-        loginError.value = error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
-    } finally {
-        loginLoading.value = false;
-    }
+    // POST tới login endpoint với intended URL
+    // Server sẽ lưu intended vào session và redirect
+    router.post(route('login'), {
+        email: loginForm.value.email,
+        password: loginForm.value.password,
+        intended: lockItem.value?.link
+    }, {
+        onError: (errors) => {
+            loginError.value = errors?.email?.[0] || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+            loginLoading.value = false;
+        }
+    });
 };
 </script>
 
