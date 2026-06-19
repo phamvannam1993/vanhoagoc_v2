@@ -145,6 +145,13 @@ class ClassController extends Controller
 
     public function assignment(Request $request)
     {
+        $user = Auth::user();
+
+        // Only DIRECTOR and TEACHER can access assignment page
+        if ($user->userType?->type === UserType::TYPE_ADMIN) {
+            return redirect()->route('admins.class.index')->with('error', 'Tài khoản Admin không có quyền giao bài');
+        }
+
         $class_id = $request->class_id;
         $name_app = '';
         $name = '';
