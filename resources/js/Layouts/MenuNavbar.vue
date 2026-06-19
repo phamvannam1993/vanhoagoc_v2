@@ -114,9 +114,8 @@
     </nav>
 
     <!-- ===================== HỘP THOẠI YÊU CẦU QUYỀN ===================== -->
-    <a-modal v-model:open="lockOpen" :title="showLoginForm ? 'Đăng nhập' : 'Cần quyền truy cập'" :centered="true" :footer="null" :width="440">
-        <!-- Màn hình yêu cầu quyền -->
-        <div v-if="!showLoginForm" class="py-2">
+    <a-modal v-model:open="lockOpen" title="Cần quyền truy cập" :centered="true" :footer="null" :width="440">
+        <div class="py-2">
             <p class="text-[15px] text-gray-700">
                 Chức năng <b>{{ lockItem?.name }}</b> chỉ dành cho vai trò:
                 <b class="text-[#2b7de9]">{{ lockRoleNames() }}</b>.
@@ -124,31 +123,10 @@
             <p class="text-[14px] text-gray-500 mt-2">
                 Tài khoản hiện tại không có quyền. Bạn có muốn đăng nhập bằng tài khoản có quyền không?
             </p>
-            <div class="flex justify-end gap-3 mt-4">
-                <a-button @click="lockOpen = false">Huỷ</a-button>
-                <a-button type="primary" @click="showLoginForm = true">Đăng nhập</a-button>
-            </div>
         </div>
-
-        <!-- Form đăng nhập -->
-        <div v-else class="py-2">
-            <form @submit.prevent="submitLogin" class="space-y-4">
-                <div>
-                    <label class="block text-[14px] font-medium text-gray-700 mb-1">Tên tài khoản / Email</label>
-                    <a-input v-model:value="loginForm.email" placeholder="Nhập tên tài khoản hoặc email" size="large" />
-                </div>
-                <div>
-                    <label class="block text-[14px] font-medium text-gray-700 mb-1">Mật khẩu</label>
-                    <a-input-password v-model:value="loginForm.password" placeholder="Nhập mật khẩu" size="large" />
-                </div>
-                <div v-if="loginError" class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
-                    {{ loginError }}
-                </div>
-                <div class="flex justify-end gap-3">
-                    <a-button @click="showLoginForm = false">Quay lại</a-button>
-                    <a-button type="primary" :loading="loginLoading" html-type="submit">Đăng nhập</a-button>
-                </div>
-            </form>
+        <div class="flex justify-end gap-3 mt-4">
+            <a-button @click="lockOpen = false">Huỷ</a-button>
+            <a-button type="primary" @click="submitLogin">Đăng nhập</a-button>
         </div>
     </a-modal>
 </template>
@@ -241,13 +219,6 @@ const isProfileOpen = ref(false)
 // ----- Khoá quyền: bấm mục ngoài quyền -> yêu cầu đăng nhập tài khoản có quyền -----
 const lockOpen = ref(false)
 const lockItem = ref(null)
-const showLoginForm = ref(false)
-const loginLoading = ref(false)
-const loginError = ref('')
-const loginForm = ref({
-    email: '',
-    password: ''
-})
 
 const lockRoleNames = () => {
     const it = lockItem.value;
@@ -259,33 +230,14 @@ const requestAccess = (item) => {
     lockItem.value = item;
     isOpen.value = false;   // đóng drawer mobile nếu đang mở
     lockOpen.value = true;
-    showLoginForm.value = false;
-    loginForm.value = { email: '', password: '' };
-    loginError.value = '';
 };
 
-const submitLogin = async () => {
-    loginLoading.value = true;
-    loginError.value = '';
-
-    try {
-        const response = await axios.post(route('login'), {
-            email: loginForm.value.email,
-            password: loginForm.value.password,
-            intended: lockItem.value?.link
-        });
-
-        // Nếu thành công, redirect tới trang đích hoặc dashboard
-        if (response.data.redirect) {
-            window.location.href = response.data.redirect;
-        } else {
-            window.location.href = lockItem.value?.link || '/';
-        }
-    } catch (error) {
-        loginError.value = error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
-    } finally {
-        loginLoading.value = false;
-    }
+const submitLogin = () => {
+    // Lưu intended URL vào session thông qua logout
+    // rồi redirect tới login page
+    router.post(route('logout'), {
+        intended: lockItem.value?.link
+    });
 };
 </script>
 
