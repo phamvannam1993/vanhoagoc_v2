@@ -145,13 +145,6 @@ class ClassController extends Controller
 
     public function assignment(Request $request)
     {
-        $user = Auth::user();
-
-        // Only DIRECTOR and TEACHER can access assignment page
-        if ($user->userType?->type === UserType::TYPE_ADMIN) {
-            return redirect()->route('admins.class.index')->with('error', 'Tài khoản Admin không có quyền giao bài');
-        }
-
         $class_id = $request->class_id;
         $name_app = '';
         $name = '';
@@ -180,7 +173,10 @@ class ClassController extends Controller
             }
 
             // Check if user is a teacher
-            if ($targetUser->userType && $targetUser->userType->type === UserType::TYPE_TEACHER) {
+            $userType = $targetUser->userType?->type;
+            \Log::info("Checking user {$user_id}: name={$targetUser->name}, type={$userType}");
+
+            if ($userType === UserType::TYPE_TEACHER) {
                 return Inertia::render('Admin/Class/TeacherAssignments', [
                     'query' => $request->query(),
                     'teacher_id' => $user_id,
