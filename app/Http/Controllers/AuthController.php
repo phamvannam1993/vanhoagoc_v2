@@ -67,6 +67,16 @@ class AuthController extends Controller
             $default = route('admins.class.index');
         }
 
+        // Nếu là request từ modal (có intended parameter), return JSON response
+        // Frontend sẽ handle redirect
+        if ($request->filled('intended')) {
+            $intendedUrl = session()->pull('url.intended') ?? $request->input('intended');
+            return response()->json([
+                'status' => true,
+                'redirect' => $intendedUrl ?? $default
+            ]);
+        }
+
         // Nếu trước đó người dùng bấm vào 1 chức năng cần quyền (đã lưu url.intended
         // lúc đăng xuất), quay lại đúng chức năng đó; nếu không thì về trang mặc định.
         return redirect()->intended($default);
