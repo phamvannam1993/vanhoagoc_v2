@@ -10,6 +10,12 @@ import { USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER } from "@/const.
 const toast = useToast();
 const page = usePage();
 const user = page.props?.auth?.user;
+
+const goBack = () => {
+    if (typeof window !== 'undefined' && window.history) {
+        window.history.back();
+    }
+};
 const showAdminMenu = !!user.user_type_id && user.user_type_id == 2;
 const query = page.props?.query;
 const name =  page.props.name;
@@ -226,7 +232,7 @@ const breadcrumbs = [
         <div class="app-page py-4">
             <div class="content-page mx-auto w-11/12">
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">Kết quả học tập</h1>
-                <a-button class="mt-6 gray-btn" @click="() => window.history.back()">Quay lại</a-button>
+                <a-button class="mt-6 gray-btn" @click="goBack">Quay lại</a-button>
                 <a
                     :href="route('admins.class.exportResult', { class_id: class_id, tab_id: tab_id })"
                     class="mt-6 ml-4"
