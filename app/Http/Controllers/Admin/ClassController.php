@@ -145,6 +145,13 @@ class ClassController extends Controller
 
     public function assignment(Request $request)
     {
+        $user = Auth::user();
+
+        // Only DIRECTOR and TEACHER can access assignment page
+        if ($user->userType?->type === UserType::TYPE_ADMIN) {
+            return redirect()->route('admins.class.index')->with('error', 'Tài khoản Admin không có quyền giao bài');
+        }
+
         $class_id = $request->class_id;
         $name_app = '';
         $name = '';
@@ -167,11 +174,13 @@ class ClassController extends Controller
             }
 
             $user = User::where('id', $user_id)->first();
+         
             if (!$user) {
                 return redirect()->route('admins.class.index')->with('error', "Học sinh ID {$user_id} không tồn tại");
             }
 
             $userClass = \App\Models\UserClass::where('user_id', $user_id)->first();
+
             if (!$userClass) {
                 return redirect()->route('admins.class.index')->with('error', "Học sinh {$user->name} chưa được xếp vào lớp nào");
             }
