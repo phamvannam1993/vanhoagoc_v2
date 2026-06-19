@@ -52,7 +52,7 @@ const columns = [
     props.mode === 'assign'
         ? { title: 'Giao bài', key: 'action', width: '20%' }
         : { title: 'Kết quả học tập', key: 'result_summary', width: '25%', align: 'center' },
-    { title: props.mode === 'assign' ? '' : 'Chi tiết', key: 'action', width: '15%', align: 'center' }
+    { title: props.mode === 'assign' ? '' : 'Chi tiết', key: 'detail', width: '15%', align: 'center' }
 ];
 
 onMounted(async () => {
@@ -320,23 +320,21 @@ const onClassFilterChange = () => {
                         </template>
                         <template v-if="column.key === 'action'">
                             <!-- Giao bài -->
-                            <template v-if="props.mode === 'assign'">
-                                <Link v-if="!record.isAssign" :href="route('admins.practices.index', { class_id: record.id })">
-                                    <a-button class="bg-[#b1b1b1] text-white" size="large">Giao bài</a-button>
-                                </Link>
-                                <Link v-else :href="route('admins.class.assignment', { class_id: record.id })">
-                                    <a-button type="primary" size="large">Đã giao — Xem/Sửa</a-button>
-                                </Link>
-                            </template>
+                            <Link v-if="!record.isAssign" :href="route('admins.practices.index', { class_id: record.id })">
+                                <a-button class="bg-[#b1b1b1] text-white" size="large">Giao bài</a-button>
+                            </Link>
+                            <Link v-else :href="route('admins.class.assignment', { class_id: record.id })">
+                                <a-button type="primary" size="large">Đã giao — Xem/Sửa</a-button>
+                            </Link>
+                        </template>
+                        <template v-if="column.key === 'detail'">
                             <!-- Kết quả -->
-                            <template v-else>
-                                <a-button v-if="!record.is_result" class="bg-[#b1b1b1] text-white" size="small" disabled>
-                                    Chưa có kết quả
-                                </a-button>
-                                <Link v-else :href="route('admins.class.resultLearn', { class_id: record.id })">
-                                    <a-button type="primary" size="small">Xem chi tiết</a-button>
-                                </Link>
-                            </template>
+                            <a-button v-if="!record.is_result" class="bg-[#b1b1b1] text-white" size="small" disabled>
+                                Chưa có kết quả
+                            </a-button>
+                            <Link v-else :href="route('admins.class.resultLearn', { class_id: record.id })">
+                                <a-button type="primary" size="small">Xem chi tiết</a-button>
+                            </Link>
                         </template>
                     </template>
                     <template #footer>
