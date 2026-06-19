@@ -28,7 +28,7 @@ class ExerciseAssignmentService
             }
         }
 
-        // Validate: Check for duplicate assignments
+        // Validate: Check for duplicate assignments (skip items already assigned)
         $duplicateCount = AssignmentStudent::where('student_id', $studentId)
             ->join('exercise_assignments', 'assignment_students.exercise_assignment_id', '=', 'exercise_assignments.id')
             ->whereIn('exercise_assignments.exercise_item_id', $itemIds)
@@ -38,20 +38,6 @@ class ExerciseAssignmentService
             return [
                 'status' => false,
                 'message' => 'Học sinh này đã được giao một số bài tập con này rồi. Vui lòng kiểm tra lại!'
-            ];
-        }
-
-        // Validate: Check if student has assignment for ANY item in this practice
-        $allItemsInPractice = ExerciseItem::where('practice_id', $practiceId)->pluck('id')->toArray();
-        $existingCount = AssignmentStudent::where('student_id', $studentId)
-            ->join('exercise_assignments', 'assignment_students.exercise_assignment_id', '=', 'exercise_assignments.id')
-            ->whereIn('exercise_assignments.exercise_item_id', $allItemsInPractice)
-            ->count();
-
-        if ($existingCount > 0) {
-            return [
-                'status' => false,
-                'message' => 'Học sinh này đã được giao 1 bài tập con trong bài tập này rồi. Mỗi học sinh chỉ được giao 1 bài con duy nhất!'
             ];
         }
 
