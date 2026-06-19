@@ -24,6 +24,11 @@ class AuthController extends Controller
 
     public function login(Request $request, AuthService $authService)
     {
+        \Log::info('Login attempt', [
+            'email' => $request->input('email'),
+            'intended' => $request->input('intended')
+        ]);
+
         // Lưu intended URL nếu có (từ modal login)
         if ($request->filled('intended')) {
             session(['url.intended' => $request->input('intended')]);
@@ -36,6 +41,11 @@ class AuthController extends Controller
         ]);
         $data['email'] = isset($data['email']) ? strtolower($data['email']) : '';
         $result = $authService->login($data);
+
+        \Log::info('Login result', [
+            'status' => $result['status'] ?? false,
+            'message' => $result['message'] ?? ''
+        ]);
 
         if (empty($result['status'])) {
             // Nếu là request từ modal (có intended parameter), return JSON error
