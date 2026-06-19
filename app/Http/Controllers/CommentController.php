@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\Helper;
+use App\Models\App;
 use App\Models\UserType;
 use App\Services\AppService;
 use App\Services\CommentService;
@@ -30,8 +31,26 @@ class CommentController extends Controller
 
     public function index(Request $request): Response
     {
-        return Inertia::render('Suggest/Index', [
+        $user = Auth::user();
+        $canViewAll = in_array($user->userType->type, [UserType::TYPE_ADMIN, UserType::TYPE_DIRECTOR]);
+
+        // Get all apps for the dropdown
+        $apps = App::all();
+
+        // Load books and weeks for each app
+        $apps = $apps->map(function ($app) use ($user, $canViewAll) {
+            $app->load(['books' => function ($q) use ($user, $canViewAll) {
+                if (!$canViewAll) {
+                    $q->where('user_id', $user->id);
+                }
+                $q->with('weeks');
+            }]);
+            return $app;
+        });
+
+        return Inertia::render('Suggest/Comments', [
             'query' => $request->query(),
+            'apps' => $apps,
         ]);
     }
     public function listCommentApp($id, Request $request): Response

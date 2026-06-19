@@ -1,0 +1,477 @@
+<script setup>
+import { Head } from '@inertiajs/vue3';
+import SchoolLayout from "@/Layouts/SchoolLayout.vue";
+import { SearchOutlined } from '@ant-design/icons-vue';
+import { onMounted, computed, reactive, ref } from "vue";
+import { Link } from '@inertiajs/vue3';
+import { useToast } from "vue-toastification";
+
+const props = defineProps({
+    apps: {
+        type: Array,
+        default: () => []
+    },
+});
+
+const toast = useToast();
+const selectedApp = ref(props.apps.length > 0 ? props.apps[0].id : null);
+
+const goBack = () => {
+    if (typeof window !== 'undefined' && window.history) {
+        window.history.back();
+    }
+};
+
+const appOptions = computed(() => [
+    {
+        value: null,
+        label: 'Tất cả App',
+    },
+    ...props.apps.map(app => ({
+        value: app.id,
+        label: app.name
+    }))
+]);
+
+const options = ref([
+    {
+        value: -1,
+        label: 'Chọn ngày',
+    },
+    {
+        value: 1,
+        label: 'Hôm nay',
+    },
+    {
+        value: 2,
+        label: 'Hôm qua',
+    },
+    {
+        value: 3,
+        label: '7 ngày qua',
+    },
+    {
+        value: 4,
+        label: '30 ngày qua',
+    },
+    {
+        value: 5,
+        label: 'Năm nay',
+    },
+]);
+
+const statusConfigs = [
+  { label: 'Chờ xử lý', value: 1 },
+  { label: 'Đã duyệt', value: 2 },
+  { label: 'Từ chối', value: 3 }
+]
+
+const filterStatuses = [
+  {
+    label: 'Tất cả',
+    value: ''
+  },
+  ...statusConfigs
+];
+
+const weekOptions = computed(() => {
+    if (!selectedApp.value) {
+        return [{
+            label: 'Tất cả',
+            value: ''
+        }];
+    }
+    const app = props.apps.find(a => a.id === selectedApp.value);
+    if (!app || !app.books) {
+        return [{
+            label: 'Tất cả',
+            value: ''
+        }];
+    }
+    return [
+        {
+            label: 'Tất cả',
+            value: ''
+        },
+        ...app.books.map(book => ({
+            label: book.name,
+            options: book.weeks.map(week => ({
+                label: week.name,
+                value: week.id
+            }))
+        }))
+    ];
+});
+
+const handleChangeApp = (value) => {
+    selectedApp.value = value;
+    formFilter.value.weekOptionFilter = null;
+    loadData();
+};
+
+const handleChange = (value) => {
+    formFilter.value.optionFilter = value;
+    loadData();
+};
+
+const handleChangeWeekFilter = (value) => {
+    formFilter.value.weekOptionFilter = value;
+    loadData();
+};
+
+const handleChangeStatusFilter = (value) => {
+    formFilter.value.status = value;
+    loadData();
+};
+
+const filterOption = (input, option) => {
+    return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+
+const columns = [
+    {
+        title: 'STT',
+        dataIndex: 'id',
+        key: 'id',
+        align: 'center',
+        width: '4%'
+    },
+    {
+        title: 'Tên',
+        dataIndex: 'name',
+        key: 'name',
+        width: '5%'
+    },
+    {
+        title: 'Nội dung comment',
+        key: 'content',
+        dataIndex: 'content',
+        width: '40%',
+        className: 'break-words'
+    },
+    {
+        title: 'Ảnh hoặc link',
+        key: 'image',
+        dataIndex: 'image',
+        width: '18%'
+    },
+    {
+        title: 'Ngày',
+        key: 'created_at',
+        dataIndex: 'created_at',
+        className: 'text-center',
+        width: '7%'
+    },
+    {
+        title: 'Trạng thái',
+        key: 'status',
+        width: '11%'
+    },
+    {
+        title: '',
+        key: 'action',
+        width: '4%'
+    },
+];
+
+const pagination = ref({
+    current: 1,
+    pageSize: 20,
+    total: 0
+});
+
+const data = ref([]);
+
+const formFilter = ref({
+    optionFilter: -1,
+    weekOptionFilter: null,
+    status: 1
+});
+
+onMounted(() => {
+    loadData();
+});
+
+const loadData = async () => {
+    const params = {
+        page: pagination.value.current,
+        app_id: selectedApp.value,
+        pageSize: pagination.value.pageSize,
+        optionFilter: formFilter.value.optionFilter,
+        weekOptionFilter: formFilter.value.weekOptionFilter,
+        status: formFilter.value.status,
+    };
+    const res = await axios.get(route("comments.json.list", params));
+    if (res.status) {
+        data.value = res.data.data.map((v) => {
+            return {
+                id: v.id,
+                name: v.user?.name,
+                image: v.user?.img,
+                content: v.comment,
+                created_at: v.created_at_formatted,
+                link: v.link,
+                status: v.status,
+                img: v.img
+            };
+        });
+        pagination.value.pageSize = res.data.per_page;
+        pagination.value.total = res.data.total;
+        pagination.value.current = res.data.current_page;
+    }
+};
+
+const listPageSize = ref([
+    {
+        value: 20,
+        label: '20/page'
+    },
+    {
+        value: 50,
+        label: '50/page'
+    },
+    {
+        value: 100,
+        label: '100/page'
+    },
+    {
+        value: 200,
+        label: '200/page'
+    },
+]);
+
+const onPageChange = (page) => {
+     pagination.value.current = page;
+    loadData()
+};
+
+const handleChangePageSize = () => {
+    loadData();
+}
+
+const handleStatusChange = async (record) => {
+    await axios.post(route("comments.json.update", record))
+        .then((response) => {
+            if (response.status === 200) {
+                if (response.data.status) {
+                    toast.success(response.data.message);
+                }else{
+                    toast.error(response.data.message);
+                }
+            }else{
+                toast.error('Đã có lỗi xảy ra, vui lòng thử lại sau!');
+            }
+        })
+        .catch(() => {
+            toast.error('Đã có lỗi xảy ra, vui lòng thử lại sau!');
+        });
+    loadData();
+}
+
+const removeFilter = () => {
+  formFilter.value.optionFilter = null;
+};
+
+const confirm = (value) => {
+    console.log(value)
+    axios
+        .delete(route('comments.json.delete', { id: value }))
+        .then((response) => {
+            if (response.status === 200) {
+                toast.success('Xóa comment thành công');
+                loadData();
+            }
+        })
+        .catch(() => {
+            toast.error('Đã có lỗi xảy ra, vui lòng thử lại sau!');
+        });
+};
+</script>
+
+<template>
+    <Head title="Danh sách comment" />
+
+    <SchoolLayout>
+        <template #header>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+                Danh sách comment
+            </h2>
+        </template>
+
+        <div class="app-page py-4">
+            <div class="content-page mx-auto w-full sm:px-6 lg:px-8">
+                <h1 class="text-[30px] font-bold text-[#2C75E3]">
+                    Danh sách comment
+                </h1>
+                <div class="relative mt-6 flex gap-4">
+                    <a-button class="custom-bg mt-3 text-black" size="middle" @click="goBack">Quay lại</a-button>
+                </div>
+                <div class="filter-page mt-4 flex gap-10">
+                    <a-select
+                        class="input-search w-2/12"
+                        v-model:value="selectedApp"
+                        show-search
+                        placeholder="Chọn App"
+                        size="large"
+                        :options="appOptions"
+                        :filter-option="filterOption"
+                        @change="handleChangeApp"
+                    ></a-select>
+                    <a-select
+                        class="input-search w-2/12"
+                        v-model:value="formFilter.optionFilter"
+                        show-search
+                        placeholder="Chọn ngày"
+                        size="large"
+                        :options="options"
+                        :filter-option="filterOption"
+                        @change="handleChange"
+                    ></a-select>
+                    <a-select
+                        class="input-search w-3/12"
+                        v-model:value="formFilter.weekOptionFilter"
+                        show-search
+                        placeholder="Khóa học/Bài"
+                        size="large"
+                        :options="weekOptions"
+                        :filter-option="filterOption"
+                        @change="handleChangeWeekFilter"
+                    ></a-select>
+                    <a-select
+                        class="input-search w-2/12"
+                        v-model:value="formFilter.status"
+                        show-search
+                        placeholder="Trạng thái"
+                        size="large"
+                        :options="filterStatuses"
+                        :filter-option="filterOption"
+                        @change="handleChangeStatusFilter"
+                    ></a-select>
+                    <a-button @click="removeFilter" size="large"
+                    >Xóa lọc</a-button
+                    >
+                </div>
+                <div class="mt-8 w-full">
+                    <a-table
+                        :columns="columns"
+                        :data-source="data"
+                        :pagination="false"
+                        bordered
+                    >
+                        <template #bodyCell="{ column, record, index }">
+                            <template v-if="column.key === 'id'">
+                                {{ index + 1 + pagination.pageSize * (pagination.current - 1) }}
+                            </template>
+                            <template v-if="column.key === 'name'">
+                                <div class="flex gap-2">
+                                    <a
+                                        class="flex items-center font-bold"
+                                    >
+                                        {{ record.name }}
+                                    </a>
+                                </div>
+                            </template>
+                            <template v-if="column.key === 'content'">
+                                <div>{{ record.content }}</div>
+                            </template>
+                            <template v-if="column.key === 'image'">
+                                <div v-if="record.link"><a :href=record.link target="_blank">{{ record.link }}</a></div>
+                                <div class="w-[75px] h-[25px]">
+                                    <a-image class="w-full h-full object-contain" v-if="record.img" :src="record.img" alt="" :preview="true"/>
+                                </div>
+                            </template>
+                            <template v-if="column.key === 'created_at'">
+                                <div>{{ record.created_at }}</div>
+                            </template>
+                            <template v-if="column.key === 'status'">
+                                <a-select
+                                    class="w-full"
+                                    v-model:value="record.status"
+                                    :options="statusConfigs"
+                                    placeholder="Chọn trạng thái"
+                                    size="large"
+                                    @change="handleStatusChange(record)"
+                                />
+                            </template>
+                            <template v-if="column.key === 'action'">
+                                <a-popconfirm
+                                    placement="topRight"
+                                    ok-text="Xóa"
+                                    cancel-text="Bỏ qua"
+                                    @confirm="confirm(record.id)"
+                                >
+                                    <template #title>
+                                        <p>Bạn có chắc chắn muốn xoá comment này?</p>
+                                    </template>
+                                    <img
+                                        class="delete-icon cursor-pointer"
+                                        src="/images/icon-game-choose-correct/icon-delete.png"
+                                        alt=""
+                                    />
+                                </a-popconfirm>
+                            </template>
+                        </template>
+                        <template #footer>
+                            <div
+                                class="flex items-center justify-end"
+                            >
+                                <!-- Pagination -->
+                                 <a-pagination
+                                    v-bind="pagination"
+                                    @change="onPageChange"
+                                    :show-size-changer="false"
+                                />
+                                   <a-select
+                                        ref="select"
+                                        v-model:value="pagination.pageSize"
+                                        @focus="focus"
+                                        @change="handleChangePageSize"
+                                    >
+                                        <a-select-option v-for="(item, index) in listPageSize" :value="item.value">{{ item.label }}</a-select-option>
+                                    </a-select>
+                            </div>
+                        </template>
+                    </a-table>
+                </div>
+            </div>
+        </div>
+    </SchoolLayout>
+</template>
+
+<style lang="scss">
+.ant-select-selector,
+.ant-input-affix-wrapper {
+    border-color: #5fb2ff !important;
+}
+.ant-btn-primary:disabled {
+    background-color: #b1b1b1;
+    color: white;
+}
+.custom-background {
+    background-color: #ffb800;
+}
+
+.ant-table {
+    font-size: 13px;
+
+    :deep(.ant-table-thead > tr > th) {
+        padding: 8px 4px !important;
+    }
+
+    :deep(.ant-table-tbody > tr > td) {
+        padding: 8px 4px !important;
+        word-break: break-word;
+        white-space: normal;
+    }
+}
+
+.break-words {
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
+}
+
+:deep(.ant-table tbody td a) {
+    word-break: break-all;
+}
+</style>
