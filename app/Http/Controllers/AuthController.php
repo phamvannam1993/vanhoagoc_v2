@@ -24,6 +24,11 @@ class AuthController extends Controller
 
     public function login(Request $request, AuthService $authService)
     {
+        // Lưu intended URL nếu có (từ modal login)
+        if ($request->filled('intended')) {
+            session(['url.intended' => $request->input('intended')]);
+        }
+
         $data = $request->all([
             'email',
             'password',
