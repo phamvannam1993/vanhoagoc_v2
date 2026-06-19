@@ -278,9 +278,23 @@ const submitLogin = () => {
         password: loginForm.value.password,
         intended: lockItem.value?.link
     }, {
+        onSuccess: () => {
+            // Login thành công - redirect sẽ tự động xảy ra
+            lockOpen.value = false;
+        },
         onError: (errors) => {
-            loginError.value = errors?.email?.[0] || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+            console.error('Login errors:', errors);
             loginLoading.value = false;
+            // Show error từ validation hoặc message field
+            if (errors?.message) {
+                loginError.value = errors.message;
+            } else if (errors?.email) {
+                loginError.value = Array.isArray(errors.email) ? errors.email[0] : errors.email;
+            } else if (errors?.password) {
+                loginError.value = Array.isArray(errors.password) ? errors.password[0] : errors.password;
+            } else {
+                loginError.value = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+            }
         }
     });
 };

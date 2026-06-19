@@ -38,10 +38,14 @@ class AuthController extends Controller
         $result = $authService->login($data);
 
         if (empty($result['status'])) {
-            return back()->withErrors($result['message']);
+            // Nếu là request từ modal (có intended parameter), return JSON error
+            if ($request->filled('intended')) {
+                return response()->json([
+                    'message' => $result['message'] ?? 'Đăng nhập thất bại'
+                ], 422);
+            }
+            return back()->withErrors(['message' => $result['message']]);
         }
-
-        $user = auth()->user();
 
         // Check quyền truy cập dựa vào user type
         $userType = $result['userType']->type ?? null;
