@@ -209,7 +209,7 @@ const rawGroups = [
         { name: 'Mã kích hoạt',          icon: 'shield',  link: route('admins.active-codes.index'), match: ['admins.active-codes'], roles: [USER_TYPE_ADMIN] },
     ]},
     { label: 'Giảng dạy', items: [
-        { name: 'Giao bài',  icon: 'send',   link: route('admins.teaching.assign'), match: ['admins.teaching.assign','admins.practices','admins.class.assignment'], roles: [USER_TYPE_TEACHER] },
+        { name: 'Giao bài',  icon: 'send',   link: route('admins.teaching.assign'), match: ['admins.teaching.assign','admins.practices','admins.class.assignment'], roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER] },
         { name: 'Kết quả',   icon: 'chart',  link: route('admins.teaching.result'), match: ['admins.teaching.result','admins.points','admins.class.result','admins.class.rank'], roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER] },
         { name: 'Sự kiện',   icon: 'trophy', link: route('admins.event.index'),     match: ['admins.event'], roles: [USER_TYPE_ADMIN, USER_TYPE_DIRECTOR, USER_TYPE_TEACHER] },
     ]},
