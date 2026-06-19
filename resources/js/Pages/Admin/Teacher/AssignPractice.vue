@@ -59,22 +59,16 @@ const columns = [
             if (record.level_type === "exercise-item") {
                 const isAssigned = assignedItems.value.has(record.id);
 
-                let buttonText = "Giao bài";
-                let buttonClass = "px-4 py-2 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors shadow-sm";
-                let isDisabled = false;
-
-                if (isAssigned) {
-                    buttonText = "Đã giao";
-                    buttonClass = "px-4 py-2 bg-gray-400 text-white text-sm font-semibold rounded-lg cursor-not-allowed shadow-sm";
-                    isDisabled = true;
-                }
+                let buttonText = isAssigned ? "Đã giao" : "Giao bài";
+                let buttonClass = isAssigned
+                    ? "px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                    : "px-4 py-2 bg-gray-400 text-white text-sm font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-sm";
 
                 return h(
                     "button",
                     {
                         class: buttonClass,
-                        disabled: isDisabled,
-                        onClick: () => !isDisabled && handleAssignItem(record)
+                        onClick: () => handleAssignItem(record)
                     },
                     buttonText
                 );
