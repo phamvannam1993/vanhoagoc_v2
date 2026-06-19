@@ -226,12 +226,7 @@ const breadcrumbs = [
         <div class="app-page py-4">
             <div class="content-page mx-auto w-11/12">
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">Kết quả học tập</h1>
-                <Link
-                    :href="route('admins.class.index', { app_id: app_id, class_id: class_id, tab_id:tab_id })"
-                    class="mt-6"
-                >
-                    <a-button class="mt-6 gray-btn" @click="() => window.history.back()">Quay lại</a-button>
-                </Link>
+                <a-button class="mt-6 gray-btn" @click="() => window.history.back()">Quay lại</a-button>
                 <a
                     :href="route('admins.class.exportResult', { class_id: class_id, tab_id: tab_id })"
                     class="mt-6 ml-4"
