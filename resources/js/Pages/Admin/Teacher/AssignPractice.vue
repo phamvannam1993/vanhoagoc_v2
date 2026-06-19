@@ -61,7 +61,7 @@ const columns = [
 
                 let buttonText = isAssigned ? "Đã giao" : "Giao bài";
                 let buttonClass = isAssigned
-                    ? "px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                    ? "px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     : "px-4 py-2 bg-gray-400 text-white text-sm font-semibold rounded-lg hover:bg-gray-500 transition-colors shadow-sm";
 
                 return h(
