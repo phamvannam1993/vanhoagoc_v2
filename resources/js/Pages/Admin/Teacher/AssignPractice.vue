@@ -58,7 +58,6 @@ const columns = [
             // For exercise items - show button with assigned status
             if (record.level_type === "exercise-item") {
                 const isAssigned = assignedItems.value.has(record.id);
-                const isDisabledInPractice = record.disabled_in_practice;
 
                 let buttonText = "Giao bài";
                 let buttonClass = "px-4 py-2 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors shadow-sm";
@@ -68,10 +67,6 @@ const columns = [
                     buttonText = "Đã giao";
                     buttonClass = "px-4 py-2 bg-gray-400 text-white text-sm font-semibold rounded-lg cursor-not-allowed shadow-sm";
                     isDisabled = true;
-                } else if (isDisabledInPractice) {
-                    buttonText = "Đã giao bài khác";
-                    buttonClass = "px-4 py-2 bg-orange-400 text-white text-sm font-semibold rounded-lg cursor-not-allowed shadow-sm";
-                    isDisabled = true;
                 }
 
                 return h(
@@ -79,8 +74,7 @@ const columns = [
                     {
                         class: buttonClass,
                         disabled: isDisabled,
-                        onClick: () => !isDisabled && handleAssignItem(record),
-                        title: isDisabledInPractice ? "Học sinh này đã được giao 1 bài trong bài tập này" : ""
+                        onClick: () => !isDisabled && handleAssignItem(record)
                     },
                     buttonText
                 );
@@ -485,8 +479,6 @@ const loadData = async () => {
                 });
 
                 if (itemRes.data.status && itemRes.data.data?.length > 0) {
-                    const hasAssignmentInPractice = itemRes.data.data.some(item => item.is_assigned);
-
                     practice.children = itemRes.data.data.map((item) => {
                         if (item.is_assigned) {
                             assignedItems.value.add(item.id);
@@ -501,8 +493,7 @@ const loadData = async () => {
                             practice_id: practice.id,
                             week_id: practice.week_id,
                             book_id: practice.book_id,
-                            is_assigned: item.is_assigned || false,
-                            disabled_in_practice: hasAssignmentInPractice && !item.is_assigned
+                            is_assigned: item.is_assigned || false
                         };
                     });
                 }
@@ -542,9 +533,6 @@ const handleExpand = async (expanded, record) => {
             });
 
             if (itemRes.data.status && itemRes.data.data && itemRes.data.data.length > 0) {
-                // Check if student has any assignment in this practice
-                const hasAssignmentInPractice = itemRes.data.data.some(item => item.is_assigned);
-
                 record.children = itemRes.data.data.map((item) => {
                     // Add assigned item to the set
                     if (item.is_assigned) {
@@ -560,9 +548,7 @@ const handleExpand = async (expanded, record) => {
                         practice_id: record.id,
                         week_id: record.week_id,
                         book_id: record.book_id,
-                        is_assigned: item.is_assigned || false,
-                        // If any item is assigned in this practice, disable all others
-                        disabled_in_practice: hasAssignmentInPractice && !item.is_assigned
+                        is_assigned: item.is_assigned || false
                     };
                 });
                 // Trigger reactive update
