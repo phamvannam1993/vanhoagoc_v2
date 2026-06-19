@@ -173,14 +173,14 @@ class ClassController extends Controller
                 return redirect()->route('admins.class.index')->with('error', 'Thiếu user_id');
             }
 
-            $targetUser = User::where('id', $user_id)->first();
+            $targetUser = User::with('userType')->where('id', $user_id)->first();
 
             if (!$targetUser) {
                 return redirect()->route('admins.class.index')->with('error', "Người dùng ID {$user_id} không tồn tại");
             }
 
             // Check if user is a teacher
-            if ($targetUser->userType?->type === UserType::TYPE_TEACHER) {
+            if ($targetUser->userType && $targetUser->userType->type === UserType::TYPE_TEACHER) {
                 return Inertia::render('Admin/Class/TeacherAssignments', [
                     'query' => $request->query(),
                     'teacher_id' => $user_id,
