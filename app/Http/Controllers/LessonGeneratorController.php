@@ -13,8 +13,8 @@ use App\Models\LessonDraft;
 
 class LessonGeneratorController extends Controller
 {
-    private $apiUrl = 'https://st-f9a9538d69944a6eb7103f62949f8a08.ecs.ap-southeast-1.on.aws/api/lesson';
-    private $apiKey = 'GS6AyLMiRyo6roZXHI7fYZLXxTPqxsnqcWF9wQ24Pic';
+    private $apiUrl = 'http://ai-automation-alb-1002705125.ap-southeast-1.elb.amazonaws.com/api/lesson';
+    private $apiKey = '5d45980542f367e47c8daf720f2a5ba71a23cee19935db18';
 
     public function generateText(Request $request)
     {
@@ -278,25 +278,25 @@ class LessonGeneratorController extends Controller
                 $payload['level_mix'] = $validated['level_mix'];
             }
 
-            // $response = Http::withHeaders([
-            //     'X-Lesson-Api-Key' => $this->apiKey,
-            //     'Content-Type' => 'application/json',
-            // ])
-            // ->timeout(60)
-            // ->post($this->apiUrl . '/bundle', $payload);
+            $response = Http::withHeaders([
+                'X-Lesson-Api-Key' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])
+            ->timeout(60)
+            ->post($this->apiUrl . '/bundle', $payload);
 
-            // if (!$response->successful()) {
-            //     Log::error('Bundle generation failed', [
-            //         'status' => $response->status(),
-            //         'body' => $response->body(),
-            //     ]);
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'Lỗi từ API: ' . $response->status()
-            //     ], 500);
-            // }
-            return response()->json(['bundle_id' => 27]);
-            // return response()->json($response->json());
+            if (!$response->successful()) {
+                Log::error('Bundle generation failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lỗi từ API: ' . $response->status()
+                ], 500);
+            }
+            // return response()->json(['bundle_id' => 27]);
+            return response()->json($response->json());
         } catch (\Exception $e) {
             Log::error('Generate bundle error: ' . $e->getMessage());
             return response()->json([

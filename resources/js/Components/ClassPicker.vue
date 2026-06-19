@@ -391,7 +391,9 @@ const onClassFilterChange = () => {
                                 { title: 'Họ tên', dataIndex: 'name', key: 'name' },
                                 { title: 'Tên tài khoản', dataIndex: 'username', key: 'username' },
                                 { title: 'Thời gian tạo', dataIndex: 'formatted_created_at', key: 'formatted_created_at', align: 'center' },
-                                { title: 'Kết quả', key: 'result', align: 'center' }
+                                props.mode === 'assign'
+                                    ? { title: 'Giao bài', key: 'assign_student', align: 'center', width: '15%' }
+                                    : { title: 'Kết quả', key: 'result', align: 'center' }
                             ]"
                             :data-source="studentData.map((s, idx) => ({
                                 ...s,
@@ -413,6 +415,14 @@ const onClassFilterChange = () => {
                                 </template>
                                 <template v-if="column.key === 'username'">
                                     {{ record.username || record.email || record.phone || '-' }}
+                                </template>
+                                <template v-if="column.key === 'assign_student'">
+                                    <Link :href="route('admins.practices.index', {
+                                        student_id: record.id,
+                                        class_id: record.class_id
+                                    })">
+                                        <a-button type="primary" size="small">Giao bài</a-button>
+                                    </Link>
                                 </template>
                                 <template v-if="column.key === 'result'">
                                     <a-button v-if="!record.is_result" class="bg-[#b1b1b1] text-white" size="small" disabled>
