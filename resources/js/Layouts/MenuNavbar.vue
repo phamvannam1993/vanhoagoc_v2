@@ -272,16 +272,15 @@ const submitLogin = () => {
     loginError.value = '';
 
     // POST tới login endpoint với intended URL
+    // Inertia sẽ tự động handle redirect nếu thành công
     router.post(route('login'), {
         email: loginForm.value.email,
         password: loginForm.value.password,
         intended: lockItem.value?.link
     }, {
-        onSuccess: (page) => {
-            // Check nếu backend trả về JSON response với redirect URL
-            if (page.props?.status) {
-                window.location.href = page.props.redirect || lockItem.value?.link || '/';
-            }
+        onSuccess: () => {
+            // Login thành công - Inertia sẽ tự động redirect
+            lockOpen.value = false;
         },
         onError: (errors) => {
             console.error('Login errors:', errors);
