@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\Helper;
 use App\Models\App;
+use App\Models\Book;
 use App\Models\UserType;
 use App\Services\AppService;
 use App\Services\CommentService;
@@ -32,13 +33,23 @@ class CommentController extends Controller
     public function index(Request $request): Response
     {
         $user = Auth::user();
-        $canViewAll = in_array($user->userType->type, [UserType::TYPE_ADMIN, UserType::TYPE_DIRECTOR]);
+        $userType = $user->userType->type;
 
-        // Get all apps for the dropdown
-        $apps = App::all();
+        // Determine which apps user can view
+        if ($userType === UserType::TYPE_ADMIN) {
+            $apps = App::all();
+        } elseif ($userType === UserType::TYPE_DIRECTOR) {
+            // Director sees only their apps
+            $apps = $user->directorApps()->get();
+        } else {
+            // Teacher sees apps from their books
+            $bookAppIds = Book::where('user_id', $user->id)->pluck('app_id')->unique();
+            $apps = App::whereIn('id', $bookAppIds)->get();
+        }
 
         // Load books and weeks for each app
-        $apps = $apps->map(function ($app) use ($user, $canViewAll) {
+        $apps = $apps->map(function ($app) use ($user, $userType) {
+            $canViewAll = in_array($userType, [UserType::TYPE_ADMIN, UserType::TYPE_DIRECTOR]);
             $app->load(['books' => function ($q) use ($user, $canViewAll) {
                 if (!$canViewAll) {
                     $q->where('user_id', $user->id);

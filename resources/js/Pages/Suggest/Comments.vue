@@ -14,7 +14,7 @@ const props = defineProps({
 });
 
 const toast = useToast();
-const selectedApp = ref(props.apps.length > 0 ? props.apps[0].id : null);
+const selectedApp = ref(null);
 
 const goBack = () => {
     if (typeof window !== 'undefined' && window.history) {
