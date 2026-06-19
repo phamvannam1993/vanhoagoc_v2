@@ -13,7 +13,7 @@ use App\Models\LessonDraft;
 
 class LessonGeneratorController extends Controller
 {
-    private $apiUrl = 'http://ai-automation-alb-1002705125.ap-southeast-1.elb.amazonaws.com/api/lesson';
+    private $apiUrl = 'https://d3lnbgfra9zhwx.cloudfront.net/api/lesson';
     private $apiKey = '5d45980542f367e47c8daf720f2a5ba71a23cee19935db18';
 
     public function generateText(Request $request)
