@@ -404,6 +404,7 @@ Route::middleware(['auth', 'checkUserRole'])->group(function () {
                     Route::get('/assigned-task', [ClassController::class, 'assignedTask'])->name('assignedTask');
                     Route::get('/rank-assigned-task', [ClassController::class, 'rankAssignedTask'])->name('rankAssignedTask');
                     Route::get('/free-practic', [ClassController::class, 'freePractic'])->name('freePractic');
+                    Route::get('/teacher-assignments', [ClassController::class, 'getTeacherAssignments'])->name('teacherAssignments');
                 });
             });
 

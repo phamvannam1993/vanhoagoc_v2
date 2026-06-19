@@ -10,10 +10,10 @@ use App\Models\App;
 use App\Models\Book;
 use App\Models\Classes;
 use App\Models\Practice;
+use App\Models\PracticeClass;
 use App\Models\User;
 use App\Models\Week;
 use App\Models\Point;
-use App\Models\PracticeClass;
 use App\Services\PointService;
 use App\Services\Admin\Class\ClassService;
 use App\Services\UserService;
@@ -173,16 +173,26 @@ class ClassController extends Controller
                 return redirect()->route('admins.class.index')->with('error', 'Thiếu user_id');
             }
 
-            $user = User::where('id', $user_id)->first();
-         
-            if (!$user) {
-                return redirect()->route('admins.class.index')->with('error', "Học sinh ID {$user_id} không tồn tại");
+            $targetUser = User::where('id', $user_id)->first();
+
+            if (!$targetUser) {
+                return redirect()->route('admins.class.index')->with('error', "Người dùng ID {$user_id} không tồn tại");
             }
 
+            // Check if user is a teacher
+            if ($targetUser->userType?->type === UserType::TYPE_TEACHER) {
+                return Inertia::render('Admin/Class/TeacherAssignments', [
+                    'query' => $request->query(),
+                    'teacher_id' => $user_id,
+                    'teacher_name' => $targetUser->name,
+                ]);
+            }
+
+            // Otherwise, treat as student
             $userClass = \App\Models\UserClass::where('user_id', $user_id)->first();
 
             if (!$userClass) {
-                return redirect()->route('admins.class.index')->with('error', "Học sinh {$user->name} chưa được xếp vào lớp nào");
+                return redirect()->route('admins.class.index')->with('error', "Học sinh {$targetUser->name} chưa được xếp vào lớp nào");
             }
 
             $classDetail = Classes::where('id', $userClass->class_id)->first();
@@ -194,7 +204,7 @@ class ClassController extends Controller
             if (!empty($appDetail)) {
                 $name_app = $appDetail->name . ' / ' . $classDetail->name;
             }
-            $name = $user->name;
+            $name = $targetUser->name;
         }
 
         return Inertia::render('Admin/Class/Assignment', [
@@ -242,6 +252,22 @@ class ClassController extends Controller
         return response()->json([
             'status' => true,
             'data' => $data
+        ]);
+    }
+
+    public function getTeacherAssignments(Request $request) {
+        $teacher_id = $request->teacher_id;
+        $data = PracticeClass::with(['practice', 'book', 'week', 'class', 'users'])
+            ->where('user_id', $teacher_id)
+            ->orderBy('created_at', 'DESC')
+            ->paginate(20);
+
+        return response()->json([
+            'status' => true,
+            'data' => $data->items(),
+            'total' => $data->total(),
+            'current_page' => $data->currentPage(),
+            'per_page' => $data->perPage()
         ]);
     }
 
