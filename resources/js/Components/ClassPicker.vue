@@ -231,6 +231,11 @@ const onTabChange = async (key) => {
         data.value = [];
         // Load all students (without app filter)
         await loadStudents();
+    } else if (key === 'class') {
+        // Reset class filters and reload
+        classSearch.value = '';
+        pagination.value.current = 1;
+        await loadClasses();
     }
 };
 
