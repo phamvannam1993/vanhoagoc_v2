@@ -19,8 +19,17 @@ const props = defineProps({
 
 const toast = useToast();
 const id = ref('');
-const pathParts = window.location.pathname.split("/").filter(Boolean);
-id.value = pathParts[pathParts.length - 1];
+
+if (typeof window !== 'undefined') {
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    id.value = pathParts[pathParts.length - 1];
+}
+
+const goBack = () => {
+    if (typeof window !== 'undefined' && window.history) {
+        window.history.back();
+    }
+};
 const options = ref([
     {
         value: -1,
@@ -257,7 +266,7 @@ const confirm = (value) => {
                     Danh sách comment - {{ app.name }}
                 </h1>
                 <div class="relative mt-6 flex gap-4">
-                    <a-button class="custom-bg mt-3 text-black" size="middle" @click="() => window.history.back()">Quay lại</a-button>
+                    <a-button class="custom-bg mt-3 text-black" size="middle" @click="goBack">Quay lại</a-button>
                 </div>
                 <div class="filter-page mt-4 flex gap-10">
                     <a-select
