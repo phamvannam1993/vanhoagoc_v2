@@ -206,16 +206,30 @@ const formAssign = ref({
 const formAssignErrors = ref({});
 
 const handleAssignItem = async (item) => {
-    // Prevent opening if already assigned
-    if (assignedItems.value.has(item.id)) {
-        toast.warning('Bài tập con này đã được giao rồi');
-        return;
-    }
-
+    // Load all exercise items for this practice
     openAssign.value = true;
-    loadingItems.value = false;
-    exerciseItems.value = [{ ...item, checked: true }];
-    selectedItems.value = [item.id];
+    loadingItems.value = true;
+
+    try {
+        const itemRes = await axios.get(route('admins.practices.json.getExerciseItems'), {
+            params: { practice_id: item.practice_id, student_id: student_id }
+        });
+
+        if (itemRes.data.status && itemRes.data.data?.length > 0) {
+            // Map items with checkbox: pre-check the clicked item and unassigned items
+            exerciseItems.value = itemRes.data.data.map(ex => ({
+                ...ex,
+                checked: ex.id === item.id && !assignedItems.value.has(ex.id)
+            }));
+        }
+    } catch (err) {
+        console.error('Error loading items:', err);
+        toast.error('Lỗi tải bài tập con');
+        openAssign.value = false;
+        return;
+    } finally {
+        loadingItems.value = false;
+    }
 
     formAssign.value = {
         checkedTime: false,
