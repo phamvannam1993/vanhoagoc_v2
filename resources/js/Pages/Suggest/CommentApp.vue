@@ -106,41 +106,43 @@ const columns = [
         dataIndex: 'id',
         key: 'id',
         align: 'center',
-        width: '5%'
+        width: '4%'
     },
     {
         title: 'Tên',
         dataIndex: 'name',
         key: 'name',
-        width: '12%'
+        width: '5%'
     },
     {
         title: 'Nội dung comment',
         key: 'content',
         dataIndex: 'content',
-        width: '25%'
+        width: '40%',
+        className: 'break-words'
     },
     {
         title: 'Ảnh hoặc link',
         key: 'image',
         dataIndex: 'image',
+        width: '18%'
     },
     {
         title: 'Ngày',
         key: 'created_at',
         dataIndex: 'created_at',
         className: 'text-center',
-        width: '5%'
+        width: '7%'
     },
     {
         title: 'Trạng thái',
         key: 'status',
-        width: '10%'
+        width: '11%'
     },
     {
         title: '',
         key: 'action',
-        width: '5%'
+        width: '4%'
     },
 ];
 const pagination = ref({
@@ -261,7 +263,7 @@ const confirm = (value) => {
         </template>
 
         <div class="app-page py-4">
-            <div class="content-page mx-auto w-full md:w-10/12 sm:px-6 lg:px-8">
+            <div class="content-page mx-auto w-full sm:px-6 lg:px-8">
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">
                     Danh sách comment - {{ app.name }}
                 </h1>
@@ -309,7 +311,6 @@ const confirm = (value) => {
                         :data-source="data"
                         :pagination="false"
                         bordered
-                        :scroll="{ x: 'max-content' }"
                     >
                         <template #bodyCell="{ column, record, index }">
                             <template v-if="column.key === 'id'">
@@ -401,5 +402,29 @@ const confirm = (value) => {
 }
 .custom-background {
     background-color: #ffb800;
+}
+
+.ant-table {
+    font-size: 13px;
+
+    :deep(.ant-table-thead > tr > th) {
+        padding: 8px 4px !important;
+    }
+
+    :deep(.ant-table-tbody > tr > td) {
+        padding: 8px 4px !important;
+        word-break: break-word;
+        white-space: normal;
+    }
+}
+
+.break-words {
+    word-break: break-word;
+    white-space: normal;
+    max-width: 100%;
+}
+
+:deep(.ant-table tbody td a) {
+    word-break: break-all;
 }
 </style>

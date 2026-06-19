@@ -145,7 +145,7 @@ const onPageChange = (page) => {
         </template>
 
         <div class="app-page py-4">
-            <div class="content-page mx-auto w-4/5 max-w-7xl sm:px-6 lg:px-8">
+            <div class="content-page mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <h1 class="text-[30px] font-bold text-[#2C75E3]">
                     Danh sách các comment App 3 gốc
                 </h1>
